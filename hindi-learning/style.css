@@ -1,0 +1,931 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #ffffff;
+  --surface: #fff7ed;
+  --surface2: #ffedd5;
+  --text: #78350f;
+  --muted: #a16207;
+  --accent: #f59e0b;
+  --accent-hover: #fbbf24;
+  --accent-light: #fef3c7;
+  --success: #22c55e;
+  --error: #ef4444;
+  --devanagari: "Noto Sans Devanagari", sans-serif;
+  --sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--sans);
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 25%, #fff7ed 50%, #ffedd5 75%, #fef3c7 100%);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.decorations {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.deco {
+  position: absolute;
+  font-size: 1.8rem;
+  opacity: 0.5;
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Diyas - scattered around with flicker effect */
+.diya { 
+  font-size: 2rem; 
+  opacity: 0.6;
+  animation: float 6s ease-in-out infinite, flicker 2s ease-in-out infinite;
+}
+.deco-1 { top: 8%; left: 4%; animation-delay: 0s; }
+.deco-2 { top: 25%; right: 6%; animation-delay: 1.2s; }
+.deco-3 { top: 55%; left: 2%; animation-delay: 2.4s; }
+.deco-4 { top: 75%; right: 4%; animation-delay: 3.6s; }
+.deco-5 { top: 90%; left: 8%; animation-delay: 4.8s; }
+
+/* Lotuses */
+.lotus { font-size: 1.6rem; opacity: 0.45; }
+.deco-6 { top: 15%; right: 3%; animation-delay: 0.5s; }
+.deco-7 { top: 45%; left: 5%; animation-delay: 2s; }
+.deco-8 { top: 80%; right: 7%; animation-delay: 3.5s; }
+
+/* Malas (prayer beads) */
+.mala { font-size: 1.5rem; opacity: 0.4; }
+.deco-9 { top: 35%; right: 2%; animation-delay: 1s; }
+.deco-10 { top: 65%; left: 3%; animation-delay: 2.8s; }
+.deco-11 { top: 95%; right: 5%; animation-delay: 4.2s; }
+
+/* Ghantas (bells) with swing effect */
+.bell { 
+  font-size: 1.4rem; 
+  opacity: 0.45;
+  animation: float 6s ease-in-out infinite, swing 1.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+.deco-12 { top: 12%; left: 7%; animation-delay: 0.8s; }
+.deco-13 { top: 50%; right: 5%; animation-delay: 2.2s; }
+.deco-14 { top: 85%; left: 4%; animation-delay: 4s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 0.6; filter: brightness(1); }
+  50% { opacity: 0.75; filter: brightness(1.2) drop-shadow(0 0 8px rgba(245, 158, 11, 0.6)); }
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.header h1 {
+  font-family: var(--devanagari);
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+  background: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-radius: 8px;
+}
+
+.logo-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 20px;
+}
+
+.tagline::before,
+.tagline::after {
+  content: '✦';
+  color: var(--accent);
+  margin: 0 8px;
+  font-size: 0.7rem;
+  vertical-align: middle;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.tab {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border: 2px solid var(--accent);
+  background: #ffffff;
+  color: var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: var(--accent-light);
+  transform: translateY(-2px);
+}
+
+.tab.active {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  border-color: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  transform: translateY(-2px);
+}
+
+.main {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 24px;
+  border: 2px solid var(--accent);
+  color: var(--text);
+  box-shadow: 0 4px 24px rgba(245, 158, 11, 0.2);
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+.panel h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel h2::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 1.1em;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+.vocab-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px dashed var(--accent);
+  border-left: 4px solid var(--accent);
+  padding-left: 16px;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
+  border-radius: 0 8px 8px 0;
+}
+
+.vocab-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.vocab-section h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--accent);
+}
+
+.vocab-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.vocab-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.color-swatch {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.vocab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.vocab-english {
+  min-width: 72px;
+  font-weight: 500;
+}
+
+.vocab-input {
+  flex: 1;
+  max-width: 200px;
+}
+
+.vocab-input.vocab-correct {
+  border-color: var(--success, #16a34a);
+  background: rgba(22, 163, 74, 0.06);
+}
+
+.vocab-input.vocab-incorrect {
+  border-color: var(--error, #dc2626);
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.vocab-correct-answer {
+  display: none;
+  font-size: 0.85rem;
+  color: var(--success, #16a34a);
+  margin-left: 4px;
+}
+
+.vocab-correct-answer.visible {
+  display: inline;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+}
+
+.pronunciation-scene {
+  margin-bottom: 12px;
+}
+
+.pronunciation-image {
+  max-width: 260px;
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  border: 3px solid var(--accent);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.api-settings {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 10px;
+  border: 1px solid var(--surface2);
+}
+
+.api-settings-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.api-settings-inner {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.api-settings-inner label { color: var(--muted); font-size: 0.9rem; }
+.api-settings-inner .select { min-width: 140px; }
+.api-settings-inner #apiKey { grid-column: 1 / -1; }
+.api-status { font-size: 0.85rem; color: var(--muted); }
+
+@media (max-width: 560px) {
+  .api-settings-inner { grid-template-columns: 1fr; }
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.input-row .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.phrase-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.text-input {
+  font-family: var(--sans);
+  font-size: 1rem;
+  padding: 12px 14px;
+  border: 2px solid #e5e7eb;
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 10px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.text-input:hover {
+  border-color: var(--accent);
+}
+
+.text-input::placeholder {
+  color: var(--muted);
+}
+
+#customVocabInput::placeholder {
+  color: #d4a574;
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25), 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.btn {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--accent-hover) 0%, #fcd34d 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.btn.secondary {
+  background: #ffffff;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+}
+
+.btn.secondary:hover {
+  background: var(--accent-light);
+  color: var(--text);
+}
+
+.output-box, .result-box {
+  font-family: var(--devanagari);
+  font-size: 1.5rem;
+  line-height: 1.6;
+  padding: 16px 18px;
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 10px;
+  border: 2px solid var(--accent);
+  border-left-width: 4px;
+  min-height: 52px;
+}
+
+.output-box.devanagari {
+  font-weight: 500;
+}
+
+.result-box.correct {
+  border-color: var(--success);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--success);
+}
+
+.result-box.incorrect {
+  border-color: var(--error);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+
+.result-box.info {
+  border-color: var(--accent);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.test-setup {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.test-setup label {
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.select {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  padding: 10px 14px;
+  border: 2px solid var(--accent);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 8px;
+  min-width: 180px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.api-settings.collapsed {
+  display: none;
+}
+
+.test-area {
+  margin-top: 16px;
+}
+
+.test-area.hidden {
+  display: none !important;
+}
+
+.images-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.images-row .img-wrap {
+  flex: 0 0 auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 3px solid var(--accent);
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.images-row .img-wrap:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+}
+
+.images-row .img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#testResult {
+  font-family: var(--sans);
+  font-size: 1rem;
+}
+
+#testResult .devanagari-part {
+  font-family: var(--devanagari);
+  font-size: 1.2rem;
+}
+
+/* Prepositions section */
+.preposition-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  justify-content: center;
+}
+
+.preposition-arrow {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.15s;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.preposition-arrow:hover:not(:disabled) {
+  transform: scale(1.1);
+  background: var(--accent-hover);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.preposition-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.preposition-scene {
+  position: relative;
+  min-height: 180px;
+  margin-bottom: 0;
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  padding: 16px;
+  flex: 1;
+  max-width: 320px;
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.15);
+}
+
+.preposition-scene-bg {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 12px;
+  min-height: 100px;
+}
+
+.preposition-scene-bg .preposition-bg-img {
+  width: 100%;
+  height: 100px;
+  object-fit: contain;
+  object-position: bottom;
+  display: block;
+}
+
+.preposition-instruction {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+.preposition-scene-branch {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 12px;
+  min-height: 100px;
+}
+
+.preposition-scene-branch .branch-img {
+  width: 100%;
+  height: 80px;
+  object-fit: contain;
+  object-position: bottom;
+  display: block;
+}
+
+.preposition-drop-zone {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 50px;
+  border: 2px dashed var(--accent);
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preposition-drop-zone.drag-over {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: var(--accent-hover);
+}
+
+.preposition-drop-zone.dropped .drop-zone-label {
+  display: none;
+}
+
+.drop-zone-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  z-index: 1;
+}
+
+.preposition-draggable {
+  cursor: grab;
+  user-select: none;
+  width: 64px;
+  height: 48px;
+  margin: 0 auto;
+  transition: opacity 0.2s;
+}
+
+.preposition-draggable:active {
+  cursor: grabbing;
+}
+
+.preposition-draggable.dragging {
+  opacity: 0.6;
+}
+
+.preposition-draggable.dropped-in {
+  position: absolute;
+  left: 50%;
+  top: 24px;
+  transform: translateX(-50%);
+  margin: 0;
+  pointer-events: none;
+}
+
+.preposition-draggable .bird-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.preposition-sentence {
+  margin-bottom: 16px;
+}
+
+.preposition-sentence label {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+#prepositionResult {
+  font-family: var(--sans);
+  font-size: 1rem;
+}
+
+#prepositionResult .devanagari-part {
+  font-family: var(--devanagari);
+  font-size: 1.2rem;
+}
+
+/* Handwriting Practice Section */
+.handwriting-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px dashed var(--accent);
+}
+
+.handwriting-section h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.handwriting-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.letter-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  padding: 16px 32px;
+  border-radius: 12px;
+  border: 3px solid var(--accent);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  min-width: 120px;
+}
+
+.letter-roman {
+  font-size: 1rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.letter-devanagari {
+  font-family: var(--devanagari);
+  font-size: 3rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.letter-devanagari.hidden {
+  display: none;
+}
+
+.letter-hint {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.letter-hint.hidden {
+  display: none;
+}
+
+.letter-display.revealed .letter-devanagari {
+  display: block;
+  animation: revealPop 0.3s ease-out;
+}
+
+.letter-display.revealed .letter-hint {
+  display: none;
+}
+
+@keyframes revealPop {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.canvas-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+#hwCanvas, #wordCanvas {
+  background: #ffffff;
+  border: 3px solid var(--accent);
+  border-radius: 12px;
+  cursor: crosshair;
+  touch-action: none;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+#wordCanvas {
+  max-width: 100%;
+}
+
+.handwriting-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+/* Word Practice Section */
+.word-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  padding: 16px 40px;
+  border-radius: 12px;
+  border: 3px solid var(--accent);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  min-width: 160px;
+}
+
+.word-roman {
+  font-size: 1.2rem;
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.word-devanagari {
+  font-family: var(--devanagari);
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--accent);
+  line-height: 1.3;
+}
+
+.word-meaning {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.word-devanagari.hidden {
+  display: none;
+}
+
+.word-hint {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.word-hint.hidden {
+  display: none;
+}
+
+.word-display.revealed .word-devanagari {
+  display: block;
+  animation: revealPop 0.3s ease-out;
+}
+
+.word-display.revealed .word-hint {
+  display: none;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  padding: 20px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+}
+
+.footer p {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 560px) {
+  .tabs {
+    flex-wrap: wrap;
+  }
+  .tab {
+    font-size: 0.75rem;
+    padding: 6px 10px;
+  }
+  .input-row {
+    flex-direction: column;
+  }
+  .btn.primary, .btn.secondary {
+    width: 100%;
+  }
+}

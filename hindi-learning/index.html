@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HindiLingo</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="decorations">
+    <!-- Diyas (clay lamps) -->
+    <span class="deco diya deco-1">🪔</span>
+    <span class="deco diya deco-2">🪔</span>
+    <span class="deco diya deco-3">🪔</span>
+    <span class="deco diya deco-4">🪔</span>
+    <span class="deco diya deco-5">🪔</span>
+    <!-- Lotuses -->
+    <span class="deco lotus deco-6">🪷</span>
+    <span class="deco lotus deco-7">🪷</span>
+    <span class="deco lotus deco-8">🪷</span>
+    <!-- Malas (prayer beads) -->
+    <span class="deco mala deco-9">📿</span>
+    <span class="deco mala deco-10">📿</span>
+    <span class="deco mala deco-11">📿</span>
+    <!-- Ghantas (bells) -->
+    <span class="deco bell deco-12">🔔</span>
+    <span class="deco bell deco-13">🔔</span>
+    <span class="deco bell deco-14">🔔</span>
+  </div>
+  <div class="app">
+    <header class="header">
+      <h1><span class="logo-icon">ॐ</span>HindiLingo</h1>
+      <p class="tagline">Phrase check, transliterate, and image tests</p>
+      <nav class="tabs">
+        <button type="button" class="tab active" data-tab="transliterate">✍️ Script</button>
+        <button type="button" class="tab" data-tab="check">🌐 Translate</button>
+        <button type="button" class="tab" data-tab="test">📝 Sentences</button>
+        <button type="button" class="tab" data-tab="pronunciation">🎤 Out loud</button>
+        <button type="button" class="tab" data-tab="vocab">📚 Vocab</button>
+        <button type="button" class="tab" data-tab="prepositions">📍 Prepositions</button>
+      </nav>
+    </header>
+
+    <main class="main">
+      <section id="transliterate" class="panel active">
+        <h2>Roman → Devanagari</h2>
+        <p class="hint">Type in romanized Hindi (e.g. namaste, hindi, aap kaise hain) and see it in Hindi script.</p>
+        <button type="button" id="toggleApiSettingsScript" class="btn secondary" style="margin-bottom:8px">API settings</button>
+        <div class="api-settings collapsed" id="apiSettingsScript">
+          <p class="api-settings-label">API key (optional — used for Translate too; OpenAI or Claude)</p>
+          <div class="api-settings-inner">
+            <label for="apiProviderScript">Provider</label>
+            <select id="apiProviderScript" class="select">
+              <option value="openai">OpenAI (GPT)</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+            </select>
+            <label for="apiKeyScript">API key</label>
+            <input type="password" id="apiKeyScript" class="text-input" placeholder="Paste key here (stored in this browser only)" autocomplete="off" />
+            <button type="button" id="saveApiKeyScript" class="btn secondary">Save</button>
+            <span class="api-status" id="apiStatusScript"></span>
+          </div>
+        </div>
+        <div class="input-row">
+          <input type="text" id="romanInput" class="text-input" placeholder="e.g. namaste" autocomplete="off" />
+          <button type="button" id="doTransliterate" class="btn primary">Show in Hindi</button>
+        </div>
+        <div class="output-box devanagari" id="devanagariOutput" aria-live="polite"></div>
+
+        <div class="handwriting-section">
+          <h3>✏️ Practice the Alphabet</h3>
+          <p class="hint">Try to draw the Hindi letter from memory. If incorrect, the symbol will be shown for you to copy.</p>
+          <div class="handwriting-nav">
+            <button type="button" id="hwPrev" class="preposition-arrow" aria-label="Previous letter">←</button>
+            <div class="letter-display">
+              <span class="letter-roman" id="hwRoman">a</span>
+              <span class="letter-devanagari hidden" id="hwDevanagari">अ</span>
+              <span class="letter-hint" id="hwHint">Draw from memory!</span>
+            </div>
+            <button type="button" id="hwNext" class="preposition-arrow" aria-label="Next letter">→</button>
+          </div>
+          <div class="canvas-container">
+            <canvas id="hwCanvas" width="280" height="280"></canvas>
+          </div>
+          <div class="handwriting-controls">
+            <button type="button" id="hwClear" class="btn secondary">Clear</button>
+            <button type="button" id="hwCheck" class="btn primary">Check</button>
+          </div>
+          <div class="result-box" id="hwResult" aria-live="polite"></div>
+        </div>
+
+        <div class="handwriting-section">
+          <h3>📝 Practice Words</h3>
+          <p class="hint">Try to write the Hindi word from memory. The characters will be revealed after you check.</p>
+          <div class="handwriting-nav">
+            <button type="button" id="wordPrev" class="preposition-arrow" aria-label="Previous word">←</button>
+            <div class="word-display" id="wordDisplayBox">
+              <span class="word-roman" id="wordRoman">raat</span>
+              <span class="word-devanagari hidden" id="wordDevanagari">रात</span>
+              <span class="word-hint" id="wordHint">Write from memory!</span>
+              <span class="word-meaning" id="wordMeaning">night</span>
+            </div>
+            <button type="button" id="wordNext" class="preposition-arrow" aria-label="Next word">→</button>
+          </div>
+          <div class="canvas-container">
+            <canvas id="wordCanvas" width="400" height="200"></canvas>
+          </div>
+          <div class="handwriting-controls">
+            <button type="button" id="wordClear" class="btn secondary">Clear</button>
+            <button type="button" id="wordCheck" class="btn primary">Check</button>
+          </div>
+          <div class="result-box" id="wordResult" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="check" class="panel">
+        <h2>Translate</h2>
+        <p class="hint">Enter a phrase (Hindi or English) to get a translation.</p>
+        <button type="button" id="toggleApiSettings" class="btn secondary" style="margin-bottom:8px">API settings</button>
+        <div class="api-settings collapsed" id="apiSettings">
+          <p class="api-settings-label">API key (optional — check any phrase with OpenAI or Claude)</p>
+          <div class="api-settings-inner">
+            <label for="apiProvider">Provider</label>
+            <select id="apiProvider" class="select">
+              <option value="openai">OpenAI (GPT)</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+            </select>
+            <label for="apiKey">API key</label>
+            <input type="password" id="apiKey" class="text-input" placeholder="Paste key here (stored in this browser only)" autocomplete="off" />
+            <button type="button" id="saveApiKey" class="btn secondary">Save</button>
+            <span class="api-status" id="apiStatus"></span>
+          </div>
+        </div>
+        <div class="api-settings translation-source collapsed" id="translationSettings">
+          <p class="api-settings-label">English → Hindi translation (optional — use Google Translate or DeepL for accuracy)</p>
+          <div class="api-settings-inner">
+            <label for="translationProvider">Source</label>
+            <select id="translationProvider" class="select">
+              <option value="">None (use AI only)</option>
+              <option value="google">Google Translate</option>
+              <option value="deepl">DeepL</option>
+            </select>
+            <label for="translationApiKey">API key</label>
+            <input type="password" id="translationApiKey" class="text-input" placeholder="Key for chosen source (stored in this browser only)" autocomplete="off" />
+            <button type="button" id="saveTranslationKey" class="btn secondary">Save</button>
+            <span class="api-status" id="translationApiStatus"></span>
+          </div>
+        </div>
+        <div class="input-row">
+          <textarea id="phraseInput" class="text-input phrase-input" placeholder="Type your Hindi phrase here..." rows="3"></textarea>
+          <button type="button" id="doCheck" class="btn primary">Check</button>
+        </div>
+        <div class="result-box" id="checkResult" aria-live="polite"></div>
+      </section>
+
+      <section id="test" class="panel">
+        <h2>Sentences</h2>
+        <p class="hint">Choose a sentence from the drop-down below, and translate it in Hindi. We'll check your answer.</p>
+        <div class="test-setup">
+          <label for="testSelect">Choose a test</label>
+          <select id="testSelect" class="select">
+            <option value="">-- Select test --</option>
+          </select>
+          <button type="button" id="startTest" class="btn secondary">Start test</button>
+        </div>
+        <div id="testArea" class="test-area hidden">
+          <div class="images-row" id="imagesRow"></div>
+          <div class="input-row">
+            <input type="text" id="testAnswer" class="text-input" placeholder="Write the sentence in Hindi (Devanagari or roman)..." />
+            <button type="button" id="submitTest" class="btn primary">Check answer</button>
+          </div>
+          <div class="result-box" id="testResult" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="pronunciation" class="panel">
+        <h2>Out loud</h2>
+        <p class="hint">Look at the picture and describe it out loud in Hindi. We'll listen and show what we heard.</p>
+        <div class="pronunciation-scene">
+          <button type="button" id="pronunciationPrev" class="preposition-arrow" aria-label="Previous picture">←</button>
+          <img
+            id="pronunciationImage"
+            class="pronunciation-image"
+            src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=640&h=360&fit=crop"
+            alt="A park with trees, grass, a bird, clouds, and sky"
+          />
+          <button type="button" id="pronunciationNext" class="preposition-arrow" aria-label="Next picture">→</button>
+        </div>
+        <div class="input-row">
+          <button type="button" id="speakPronunciation" class="btn secondary">🎤 Speak description</button>
+          <span id="pronunciationStatus" class="hint" aria-live="polite"></span>
+        </div>
+        <div class="output-box" id="pronunciationHeard" aria-live="polite"></div>
+        <div class="result-box" id="pronunciationResult" aria-live="polite"></div>
+      </section>
+
+      <section id="vocab" class="panel">
+        <h2>Vocab</h2>
+        <p class="hint">Practice vocabulary by category.</p>
+
+        <div class="vocab-section" id="vocabColors">
+          <h3>Colors</h3>
+          <p class="hint">Write the Hindi word for each color (roman or Devanagari).</p>
+          <ul class="vocab-list vocab-colors" id="vocabColorsList" aria-label="Color words">
+            <li class="vocab-row"><span class="color-swatch" style="background:#dc2626" title="red"></span><span class="vocab-english">red</span><input type="text" class="text-input vocab-input" data-answer="laal" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#ea580c" title="orange"></span><span class="vocab-english">orange</span><input type="text" class="text-input vocab-input" data-answer="narangi" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#ca8a04" title="yellow"></span><span class="vocab-english">yellow</span><input type="text" class="text-input vocab-input" data-answer="peela" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#16a34a" title="green"></span><span class="vocab-english">green</span><input type="text" class="text-input vocab-input" data-answer="hara" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#2563eb" title="blue"></span><span class="vocab-english">blue</span><input type="text" class="text-input vocab-input" data-answer="neela" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#9333ea" title="purple"></span><span class="vocab-english">purple</span><input type="text" class="text-input vocab-input" data-answer="baingani" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#db2777" title="pink"></span><span class="vocab-english">pink</span><input type="text" class="text-input vocab-input" data-answer="gulabi" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#f5f5f5;border:1px solid #ccc" title="white"></span><span class="vocab-english">white</span><input type="text" class="text-input vocab-input" data-answer="safed" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#1c1917" title="black"></span><span class="vocab-english">black</span><input type="text" class="text-input vocab-input" data-answer="kala" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="color-swatch" style="background:#78350f" title="brown"></span><span class="vocab-english">brown</span><input type="text" class="text-input vocab-input" data-answer="bhoora" placeholder="Hindi word" autocomplete="off" /></li>
+          </ul>
+          <button type="button" id="checkColors" class="btn primary">Check answers</button>
+          <div class="result-box" id="vocabColorsResult" aria-live="polite"></div>
+        </div>
+
+        <div class="vocab-section" id="vocabFruits">
+          <h3>Fruits</h3>
+          <p class="hint">Write the Hindi word for each fruit (roman or Devanagari).</p>
+          <ul class="vocab-list" id="vocabFruitsList" aria-label="Fruit words">
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍎</span><span class="vocab-english">apple</span><input type="text" class="text-input vocab-input" data-answer="seb" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍊</span><span class="vocab-english">orange</span><input type="text" class="text-input vocab-input" data-answer="santra" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍌</span><span class="vocab-english">banana</span><input type="text" class="text-input vocab-input" data-answer="kela" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍑</span><span class="vocab-english">peach</span><input type="text" class="text-input vocab-input" data-answer="aadu" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🫐</span><span class="vocab-english">plum</span><input type="text" class="text-input vocab-input" data-answer="alubukhara" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍒</span><span class="vocab-english">lychee</span><input type="text" class="text-input vocab-input" data-answer="litchi" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍇</span><span class="vocab-english">grapes</span><input type="text" class="text-input vocab-input" data-answer="angoor" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍈</span><span class="vocab-english">melon</span><input type="text" class="text-input vocab-input" data-answer="kharbooja" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍉</span><span class="vocab-english">watermelon</span><input type="text" class="text-input vocab-input" data-answer="tarbooz" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍐</span><span class="vocab-english">pear</span><input type="text" class="text-input vocab-input" data-answer="nashpati" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍍</span><span class="vocab-english">pineapple</span><input type="text" class="text-input vocab-input" data-answer="ananas" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍈</span><span class="vocab-english">guava</span><input type="text" class="text-input vocab-input" data-answer="amrood" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥭</span><span class="vocab-english">mango</span><input type="text" class="text-input vocab-input" data-answer="aam" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍋</span><span class="vocab-english">lemon</span><input type="text" class="text-input vocab-input" data-answer="nimbu" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍋</span><span class="vocab-english">lime</span><input type="text" class="text-input vocab-input" data-answer="nimbu" placeholder="Hindi word" autocomplete="off" /></li>
+          </ul>
+          <button type="button" id="checkFruits" class="btn primary">Check answers</button>
+          <div class="result-box" id="vocabFruitsResult" aria-live="polite"></div>
+        </div>
+
+        <div class="vocab-section" id="vocabVegetables">
+          <h3>Vegetables</h3>
+          <p class="hint">Write the Hindi word for each vegetable (roman or Devanagari).</p>
+          <ul class="vocab-list" id="vocabVegetablesList" aria-label="Vegetable words">
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥔</span><span class="vocab-english">potato</span><input type="text" class="text-input vocab-input" data-answer="aloo" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🫛</span><span class="vocab-english">snap pea</span><input type="text" class="text-input vocab-input" data-answer="matar" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍅</span><span class="vocab-english">tomato</span><input type="text" class="text-input vocab-input" data-answer="tamatar" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥒</span><span class="vocab-english">cucumber</span><input type="text" class="text-input vocab-input" data-answer="kheera" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥕</span><span class="vocab-english">carrot</span><input type="text" class="text-input vocab-input" data-answer="gajar" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥕</span><span class="vocab-english">radish</span><input type="text" class="text-input vocab-input" data-answer="mooli" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🫑</span><span class="vocab-english">bell pepper</span><input type="text" class="text-input vocab-input" data-answer="shimla mirch" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🧅</span><span class="vocab-english">onion</span><input type="text" class="text-input vocab-input" data-answer="pyaaz" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥦</span><span class="vocab-english">cauliflower</span><input type="text" class="text-input vocab-input" data-answer="gobhi" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌶️</span><span class="vocab-english">chili pepper</span><input type="text" class="text-input vocab-input" data-answer="mirch" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🎃</span><span class="vocab-english">pumpkin</span><input type="text" class="text-input vocab-input" data-answer="kaddu" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥒</span><span class="vocab-english">gourd</span><input type="text" class="text-input vocab-input" data-answer="lauki" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌶️</span><span class="vocab-english">okra</span><input type="text" class="text-input vocab-input" data-answer="bhindi" placeholder="Hindi word" autocomplete="off" /></li>
+          </ul>
+          <button type="button" id="checkVegetables" class="btn primary">Check answers</button>
+          <div class="result-box" id="vocabVegetablesResult" aria-live="polite"></div>
+        </div>
+
+        <div class="vocab-section" id="vocabNature">
+          <h3>Nature</h3>
+          <p class="hint">Write the Hindi word for each (roman or Devanagari).</p>
+          <ul class="vocab-list" id="vocabNatureList" aria-label="Nature words">
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">⚡</span><span class="vocab-english">lightning</span><input type="text" class="text-input vocab-input" data-answer="bijli" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌧️</span><span class="vocab-english">rain</span><input type="text" class="text-input vocab-input" data-answer="barish" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌾</span><span class="vocab-english">grass</span><input type="text" class="text-input vocab-input" data-answer="ghaas" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌳</span><span class="vocab-english">tree</span><input type="text" class="text-input vocab-input" data-answer="ped" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌸</span><span class="vocab-english">flower</span><input type="text" class="text-input vocab-input" data-answer="phool" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">☁️</span><span class="vocab-english">cloud</span><input type="text" class="text-input vocab-input" data-answer="badal" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌤️</span><span class="vocab-english">sky</span><input type="text" class="text-input vocab-input" data-answer="aasman" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">☀️</span><span class="vocab-english">sun</span><input type="text" class="text-input vocab-input" data-answer="suraj" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🌱</span><span class="vocab-english">small plant</span><input type="text" class="text-input vocab-input" data-answer="paudha" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🛤️</span><span class="vocab-english">road</span><input type="text" class="text-input vocab-input" data-answer="sadak" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">❄️</span><span class="vocab-english">snow</span><input type="text" class="text-input vocab-input" data-answer="barf" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍃</span><span class="vocab-english">leaves</span><input type="text" class="text-input vocab-input" data-answer="patte" placeholder="Hindi word" autocomplete="off" /></li>
+          </ul>
+          <button type="button" id="checkNature" class="btn primary">Check answers</button>
+          <div class="result-box" id="vocabNatureResult" aria-live="polite"></div>
+        </div>
+
+        <div class="vocab-section" id="vocabActionVerbs">
+          <h3>Action verbs</h3>
+          <p class="hint">Write the Hindi verb (infinitive, roman or Devanagari) for each.</p>
+          <ul class="vocab-list" id="vocabActionVerbsList" aria-label="Action verb words">
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">⚽</span><span class="vocab-english">to play (a sport)</span><input type="text" class="text-input vocab-input" data-answer="khelna" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🎸</span><span class="vocab-english">to play (an instrument)</span><input type="text" class="text-input vocab-input" data-answer="bajana" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">😴</span><span class="vocab-english">to sleep</span><input type="text" class="text-input vocab-input" data-answer="sona" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🪑</span><span class="vocab-english">to sit</span><input type="text" class="text-input vocab-input" data-answer="baithna" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">👀</span><span class="vocab-english">to watch</span><input type="text" class="text-input vocab-input" data-answer="dekhna" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🔨</span><span class="vocab-english">to make</span><input type="text" class="text-input vocab-input" data-answer="banana" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">📖</span><span class="vocab-english">to read</span><input type="text" class="text-input vocab-input" data-answer="padhna" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🍽️</span><span class="vocab-english">to eat</span><input type="text" class="text-input vocab-input" data-answer="khana" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🥤</span><span class="vocab-english">to drink</span><input type="text" class="text-input vocab-input" data-answer="peena" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">✅</span><span class="vocab-english">to do</span><input type="text" class="text-input vocab-input" data-answer="karna" placeholder="Hindi word" autocomplete="off" /></li>
+          </ul>
+          <button type="button" id="checkActionVerbs" class="btn primary">Check answers</button>
+          <div class="result-box" id="vocabActionVerbsResult" aria-live="polite"></div>
+        </div>
+
+        <div class="vocab-section" id="vocabAnimals">
+          <h3>Animals</h3>
+          <p class="hint">Write the Hindi word for each animal (roman or Devanagari).</p>
+          <ul class="vocab-list" id="vocabAnimalsList" aria-label="Animal words">
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐃</span><span class="vocab-english">buffalo</span><input type="text" class="text-input vocab-input" data-answer="bhains" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐄</span><span class="vocab-english">cow</span><input type="text" class="text-input vocab-input" data-answer="gaay" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🫏</span><span class="vocab-english">donkey</span><input type="text" class="text-input vocab-input" data-answer="gadha" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐍</span><span class="vocab-english">snake</span><input type="text" class="text-input vocab-input" data-answer="saanp" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🦁</span><span class="vocab-english">lion</span><input type="text" class="text-input vocab-input" data-answer="sher" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐦</span><span class="vocab-english">bird</span><input type="text" class="text-input vocab-input" data-answer="chiriya" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐻</span><span class="vocab-english">bear</span><input type="text" class="text-input vocab-input" data-answer="bhaloo" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐘</span><span class="vocab-english">elephant</span><input type="text" class="text-input vocab-input" data-answer="haathi" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐴</span><span class="vocab-english">horse</span><input type="text" class="text-input vocab-input" data-answer="ghoda" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🦒</span><span class="vocab-english">giraffe</span><input type="text" class="text-input vocab-input" data-answer="jiraaf" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🐆</span><span class="vocab-english">cheetah</span><input type="text" class="text-input vocab-input" data-answer="cheetah" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🦓</span><span class="vocab-english">zebra</span><input type="text" class="text-input vocab-input" data-answer="zebra" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🦚</span><span class="vocab-english">peacock</span><input type="text" class="text-input vocab-input" data-answer="mor" placeholder="Hindi word" autocomplete="off" /></li>
+            <li class="vocab-row"><span class="vocab-icon" aria-hidden="true">🦌</span><span class="vocab-english">deer</span><input type="text" class="text-input vocab-input" data-answer="hiran" placeholder="Hindi word" autocomplete="off" /></li>
+          </ul>
+          <button type="button" id="checkAnimals" class="btn primary">Check answers</button>
+          <div class="result-box" id="vocabAnimalsResult" aria-live="polite"></div>
+        </div>
+
+        <div class="vocab-section" id="vocabCustom">
+          <h3>Your vocab</h3>
+          <p class="hint">Enter English words or phrases (one per line). We'll translate them to Hindi and quiz you—same as the lists above.</p>
+          <textarea id="customVocabInput" class="text-input phrase-input" rows="4" placeholder="e.g. dog&#10;e.g. good morning&#10;e.g. water"></textarea>
+          <div class="input-row">
+            <button type="button" id="buildCustomVocab" class="btn secondary">Build list</button>
+          </div>
+          <ul class="vocab-list" id="vocabCustomList" aria-label="Your custom vocab"></ul>
+          <button type="button" id="checkCustomVocab" class="btn primary" disabled>Check answers</button>
+          <div class="result-box" id="vocabCustomResult" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="prepositions" class="panel">
+        <h2 id="prepositionTitle">Preposition: par (on)</h2>
+        <p class="hint" id="prepositionHint">Drag the item into the box, then write the sentence. Preposition must come after subject and noun.</p>
+        <div class="preposition-nav">
+          <button type="button" id="prepositionPrev" class="preposition-arrow" aria-label="Previous">←</button>
+          <p class="hint" style="display:none" id="oldHint">Drag the bird onto the branch (into the box), then write the sentence in Hindi using “par” (on).</p>
+        <div class="preposition-scene" id="prepositionScene">
+            <div class="preposition-scene-bg" id="prepositionSceneBg">
+              <img class="preposition-bg-img" id="prepositionBgImg" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Cpath d='M20 60 Q60 40 100 55 Q140 30 180 50' fill='none' stroke='%236b4423' stroke-width='8' stroke-linecap='round'/%3E%3Cellipse cx='40' cy='55' rx='18' ry='8' fill='%232d5a27'/%3E%3Cellipse cx='100' cy='45' rx='22' ry='10' fill='%232d5a27'/%3E%3Cellipse cx='160' cy='48' rx='16' ry='7' fill='%232d5a27'/%3E%3C/svg%3E" alt="branch" />
+              <div class="preposition-drop-zone" id="prepositionDropZone">
+                <span class="drop-zone-label" id="prepositionDropLabel">↓ drop here</span>
+              </div>
+            </div>
+            <div class="preposition-draggable" id="prepositionDraggable" draggable="true" role="button" tabindex="0">
+              <img class="preposition-drag-img" id="prepositionDragImg" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 40'%3E%3Cellipse cx='30' cy='22' rx='22' ry='14' fill='%23f59e0b'/%3E%3Cellipse cx='30' cy='20' rx='18' ry='11' fill='%23fbbf24'/%3E%3Cpath d='M8 18 L2 12 M52 18 L58 12' stroke='%236b4423' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M20 8 Q30 14 40 8' fill='none' stroke='%236b4423' stroke-width='1.5'/%3E%3Ccircle cx='38' cy='18' r='2' fill='%23000'/%3E%3C/svg%3E" alt="bird" />
+            </div>
+          </div>
+          <button type="button" id="prepositionNext" class="preposition-arrow" aria-label="Next">→</button>
+        </div>
+        <p class="preposition-instruction" id="prepositionInstruction">Order: subject + noun + preposition. E.g. chiriya perh par hai.</p>
+        <div class="preposition-sentence">
+          <label for="prepositionAnswer">Sentence (use “par” for on):</label>
+          <div class="input-row">
+            <input type="text" id="prepositionAnswer" class="text-input" placeholder="e.g. chiriya perh par hai" />
+            <button type="button" id="checkPreposition" class="btn primary">Check</button>
+          </div>
+        </div>
+        <div class="result-box" id="prepositionResult" aria-live="polite"></div>
+      </section>
+    </main>
+    <footer class="footer">
+      <p>🪔 Happy Learning! 🪷</p>
+    </footer>
+  </div>
+
+  <script src="transliterate.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

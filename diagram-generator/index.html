@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudySketch</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>StudySketch</h1>
+            <p>Turn your study guides into clean, easy-to-understand visuals</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <label for="textInput">Enter your study guide or informational text:</label>
+                <div class="tip">
+                    💡 Tip: Use <code># Heading</code>, <code>## Subheading</code>, or numbered lists (1., 2., A., B.) to structure your content
+                </div>
+                <textarea 
+                    id="textInput" 
+                    placeholder="Paste your study guide here (with headings/subheadings)...&#10;&#10;Example:&#10;# Photosynthesis&#10;&#10;## Overview&#10;Photosynthesis is the process by which plants convert light energy into chemical energy.&#10;&#10;## Main Stages&#10;&#10;### Light-Dependent Reactions&#10;Take place in the thylakoid membranes and produce ATP and NADPH.&#10;&#10;### Calvin Cycle&#10;Occurs in the stroma and uses ATP and NADPH to fix carbon dioxide into glucose."
+                    rows="15"
+                ></textarea>
+                <div class="controls">
+                    <button id="generateBtn" class="btn btn-primary">Generate Visual</button>
+                    <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                    <span class="select" aria-label="Visual generation mode">Visual (AI chooses best format)</span>
+                </div>
+                <div class="fast-preview-row">
+                    <label class="fast-preview-label">
+                        <input id="fastPreviewToggle" type="checkbox" />
+                        Fast preview mode (faster, one diagram per concept)
+                    </label>
+                </div>
+                <div class="settings-row">
+                    <details class="settings-details">
+                        <summary>Image generation settings</summary>
+                        <p class="settings-hint">Generate <strong>custom drawings and illustrations</strong> using ChatGPT + DALL-E. ChatGPT processes your study guide text and creates optimized prompts for DALL-E. Requires an <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI API key</a> (works for both ChatGPT and DALL-E).</p>
+                        <label for="openaiKey" class="settings-label">OpenAI API Key</label>
+                        <input type="password" id="openaiKey" class="settings-input" placeholder="sk-..." autocomplete="off" />
+                        <div id="apiKeyStatus" class="api-key-status"></div>
+                        <p class="settings-note">💡 Use the field above, or add your key in <code>config.local.js</code> (see README). Get a key at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a></p>
+                    </details>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <div class="output-header">
+                    <h2>Generated Visual</h2>
+                    <div class="output-actions">
+                        <button id="downloadBtn" class="btn btn-small">Download SVG</button>
+                        <button id="downloadPngBtn" class="btn btn-small btn-optional" style="display: none;">Download PNG</button>
+                        <button id="showPromptsBtn" class="btn btn-small btn-optional" style="display: none;">Show Prompts</button>
+                    </div>
+                </div>
+                <div id="diagnosticsPanel" class="diagnostics-panel" style="display: none;"></div>
+                <div id="promptsDebug" class="prompts-debug" style="display: none;"></div>
+                <div id="diagramContainer" class="diagram-container">
+                    <div class="placeholder">
+                        <p>Enter text above and click "Generate Visual" to create a visual representation</p>
+                    </div>
+                </div>
+                <!-- Learning panel is dynamically injected below clicked diagram cards -->
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="config.js"></script>
+    <script src="config.local.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1644 @@
+(function () {
+  'use strict';
+
+  var transliterate = window.HindiTransliterate && window.HindiTransliterate.toDevanagari;
+
+  function $(id) { return document.getElementById(id); }
+  function qs(s) { return document.querySelector(s); }
+  function qsAll(s) { return document.querySelectorAll(s); }
+
+  function tabSwitch() {
+    qsAll('.tab').forEach(function (tab) {
+      tab.classList.toggle('active', tab.getAttribute('data-tab') === this);
+    }.bind(this));
+    qsAll('.panel').forEach(function (panel) {
+      panel.classList.toggle('active', panel.id === this);
+    }.bind(this));
+  }
+
+  qsAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      tabSwitch.call(tab.getAttribute('data-tab'));
+    });
+  });
+
+  var devanagariOutput = $('devanagariOutput');
+  var romanInput = $('romanInput');
+  var doTransliterateBtn = $('doTransliterate');
+  $('doTransliterate').addEventListener('click', function () {
+    var text = romanInput.value.trim();
+    if (!text) {
+      devanagariOutput.textContent = '';
+      return;
+    }
+    var config = getApiConfig();
+    if (config) {
+      devanagariOutput.textContent = 'Converting…';
+      doTransliterateBtn.disabled = true;
+      romanToDevanagariWithLlm(config, text, function (err, devanagari) {
+        doTransliterateBtn.disabled = false;
+        if (err) {
+          devanagariOutput.textContent = 'API error: ' + err;
+          return;
+        }
+        if (!devanagari) {
+          devanagariOutput.textContent = 'No result from API.';
+          return;
+        }
+        devanagariOutput.textContent = devanagari;
+      });
+    } else {
+      devanagariOutput.textContent = transliterate(text) || text;
+    }
+  });
+  romanInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') $('doTransliterate').click();
+  });
+
+  function normalizeForCompare(s) {
+    return (s || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/[।.]/g, '').replace(/\u093C/g, '');
+  }
+
+  function toDevanagariIfRoman(s) {
+    if (!s || !s.trim()) return '';
+    var t = s.trim();
+    if (/[\u0900-\u097F]/.test(t)) return t;
+    return transliterate(t) || t;
+  }
+
+  var phraseInput = $('phraseInput');
+  var checkResult = $('checkResult');
+  var apiProvider = $('apiProvider');
+  var apiKeyInput = $('apiKey');
+  var apiStatus = $('apiStatus');
+  var doCheckBtn = $('doCheck');
+
+  var STORAGE_KEY = 'hindi-learning-api';
+  var apiProviderScript = $('apiProviderScript');
+  var apiKeyScriptInput = $('apiKeyScript');
+  var apiStatusScript = $('apiStatusScript');
+  function syncApiKeyToScript() {
+    if (apiProviderScript) apiProviderScript.value = apiProvider.value;
+    if (apiKeyScriptInput) apiKeyScriptInput.value = apiKeyInput.value;
+  }
+  function syncApiKeyFromScript() {
+    if (apiProviderScript) apiProvider.value = apiProviderScript.value;
+    if (apiKeyScriptInput) apiKeyInput.value = apiKeyScriptInput.value;
+  }
+  function loadApiSettings() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s.provider) { apiProvider.value = s.provider; if (apiProviderScript) apiProviderScript.value = s.provider; }
+        if (s.key) { apiKeyInput.value = s.key; if (apiKeyScriptInput) apiKeyScriptInput.value = s.key; }
+        apiStatus.textContent = 'Key saved (local only).';
+        if (apiStatusScript) apiStatusScript.textContent = 'Key saved (local only).';
+      }
+    } catch (e) {}
+  }
+  loadApiSettings();
+
+  $('saveApiKey').addEventListener('click', function () {
+    var key = apiKeyInput.value.trim();
+    var provider = apiProvider.value;
+    if (key) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider: provider, key: key }));
+        apiStatus.textContent = 'Saved. Stored in this browser only.';
+        syncApiKeyToScript();
+        if (apiStatusScript) apiStatusScript.textContent = 'Saved.';
+      } catch (e) {
+        apiStatus.textContent = 'Could not save.';
+      }
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      apiStatus.textContent = 'Cleared.';
+      syncApiKeyToScript();
+      if (apiStatusScript) apiStatusScript.textContent = 'Cleared.';
+    }
+  });
+
+  if ($('saveApiKeyScript')) {
+    $('saveApiKeyScript').addEventListener('click', function () {
+      var key = apiKeyScriptInput ? apiKeyScriptInput.value.trim() : '';
+      var provider = apiProviderScript ? apiProviderScript.value : '';
+      if (key) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider: provider, key: key }));
+          syncApiKeyFromScript();
+          if (apiStatusScript) apiStatusScript.textContent = 'Saved. Stored in this browser only.';
+          if (apiStatus) apiStatus.textContent = 'Saved.';
+        } catch (e) {
+          if (apiStatusScript) apiStatusScript.textContent = 'Could not save.';
+        }
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        syncApiKeyFromScript();
+        if (apiStatusScript) apiStatusScript.textContent = 'Cleared.';
+        if (apiStatus) apiStatus.textContent = 'Cleared.';
+      }
+    });
+  }
+
+  var TRANSLATION_STORAGE_KEY = 'hindi-learning-translation';
+  var translationProviderSelect = $('translationProvider');
+  var translationApiKeyInput = $('translationApiKey');
+  var translationApiStatus = $('translationApiStatus');
+  function loadTranslationSettings() {
+    try {
+      var raw = localStorage.getItem(TRANSLATION_STORAGE_KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s.provider) translationProviderSelect.value = s.provider;
+        if (s.key) translationApiKeyInput.value = s.key;
+        translationApiStatus.textContent = 'Saved.';
+      }
+    } catch (e) {}
+  }
+  loadTranslationSettings();
+  $('saveTranslationKey').addEventListener('click', function () {
+    var key = translationApiKeyInput.value.trim();
+    var provider = translationProviderSelect.value;
+    if (key && provider) {
+      try {
+        localStorage.setItem(TRANSLATION_STORAGE_KEY, JSON.stringify({ provider: provider, key: key }));
+        translationApiStatus.textContent = 'Saved.';
+      } catch (e) {
+        translationApiStatus.textContent = 'Could not save.';
+      }
+    } else {
+      localStorage.removeItem(TRANSLATION_STORAGE_KEY);
+      translationApiStatus.textContent = provider ? 'Enter key.' : 'Cleared.';
+    }
+  });
+
+  function getApiConfig() {
+    var key = apiKeyInput && apiKeyInput.value.trim();
+    var provider = apiProvider && apiProvider.value;
+    if (!key && apiKeyScriptInput) {
+      key = apiKeyScriptInput.value.trim();
+      provider = apiProviderScript && apiProviderScript.value;
+    }
+    if (!key) return null;
+    return { provider: provider || 'openai', key: key };
+  }
+
+  function getTranslationConfig() {
+    var key = translationApiKeyInput.value.trim();
+    var provider = translationProviderSelect.value;
+    if (!key || !provider) return null;
+    return { provider: provider, key: key };
+  }
+
+  (function initApiToggles() {
+    var scriptToggle = $('toggleApiSettingsScript');
+    var scriptSettings = $('apiSettingsScript');
+    if (scriptToggle && scriptSettings) {
+      scriptToggle.addEventListener('click', function () {
+        var isCollapsed = scriptSettings.classList.toggle('collapsed');
+        scriptToggle.textContent = isCollapsed ? 'Show API settings' : 'Hide API settings';
+      });
+      scriptToggle.textContent = 'Show API settings';
+    }
+
+    var mainToggle = $('toggleApiSettings');
+    var mainSettings = $('apiSettings');
+    var translationSettings = $('translationSettings');
+    if (mainToggle && mainSettings && translationSettings) {
+      mainToggle.addEventListener('click', function () {
+        var collapsed = !mainSettings.classList.contains('collapsed');
+        mainSettings.classList.toggle('collapsed', collapsed);
+        translationSettings.classList.toggle('collapsed', collapsed);
+        mainToggle.textContent = collapsed ? 'Show API settings' : 'Hide API settings';
+      });
+      mainToggle.textContent = 'Show API settings';
+    }
+  })();
+
+  function looksLikeEnglish(text) {
+    if (!text || /[\u0900-\u097F]/.test(text)) return false;
+    var latin = text.replace(/[^a-zA-Z\s\'\"\,\?\.\!\-]/g, '');
+    return latin.length >= text.length * 0.7;
+  }
+
+  function translateWithGoogle(phrase, key, cb, opts) {
+    opts = opts || {};
+    var source = opts.source || 'en';
+    var target = opts.target || 'hi';
+    var url = 'https://translation.googleapis.com/language/translate/v2?key=' + encodeURIComponent(key) +
+      '&q=' + encodeURIComponent(phrase) +
+      (source ? '&source=' + encodeURIComponent(source) : '') +
+      '&target=' + encodeURIComponent(target);
+    fetch(url, { method: 'GET' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) return cb(data.error.message || 'Google Translate error');
+        var t = data.data && data.data.translations && data.data.translations[0];
+        cb(null, t ? t.translatedText : null);
+      })
+      .catch(function (e) { cb(e.message || 'Network error'); });
+  }
+
+  function translateWithDeepL(phrase, key, cb, opts) {
+    opts = opts || {};
+    var source = opts.source || 'EN';
+    var target = opts.target || 'HI';
+    var url = 'https://api-free.deepl.com/v2/translate';
+    var params = { text: phrase, target_lang: target };
+    if (source) params.source_lang = source;
+    var body = new URLSearchParams(params);
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': 'DeepL-Auth-Key ' + key, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.message) return cb(data.message);
+        var t = data.translations && data.translations[0];
+        cb(null, t ? t.text : null);
+      })
+      .catch(function (e) { cb(e.message || 'Network error'); });
+  }
+
+  function extractDevanagariFromResponse(str) {
+    if (!str || typeof str !== 'string') return '';
+    var match = str.replace(/\s+/g, ' ').match(/[\u0900-\u097F\u200C\u200D]+/g);
+    return match ? match.join(' ').trim() : str.trim();
+  }
+
+  function romanToDevanagariWithLlm(config, roman, cb) {
+    var systemMsg = 'You convert romanized Hindi (Latin) to Devanagari only. Output ONLY the Devanagari characters, no other text. Use correct Hindi spelling: e.g. "tara" (name/star) = तारा, not तर. Single word or phrase only.';
+    var userMsg = 'Convert to Devanagari (output only the Devanagari, nothing else): ' + roman;
+    if (config.provider === 'openai') {
+      fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemMsg },
+            { role: 'user', content: userMsg }
+          ],
+          temperature: 0
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(data.error.message);
+          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+          var devanagari = extractDevanagariFromResponse(text);
+          cb(null, devanagari || text.trim());
+        })
+        .catch(function (e) { cb(e.message); });
+    } else if (config.provider === 'anthropic') {
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': config.key, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 256,
+          system: systemMsg,
+          messages: [{ role: 'user', content: userMsg }]
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(data.error.message);
+          var text = (data.content && data.content[0] && data.content[0].text) || '';
+          var devanagari = extractDevanagariFromResponse(text);
+          cb(null, devanagari || text.trim());
+        })
+        .catch(function (e) { cb(e.message); });
+    } else {
+      cb('Unknown provider');
+    }
+  }
+
+  function devanagariToRomanWithLlm(config, devanagari, cb) {
+    var prompt = 'Convert this Hindi phrase from Devanagari to Roman/Latin script only. Output ONLY the romanized text, nothing else. No explanation, no quotes. Phrase: ' + devanagari;
+    if (config.provider === 'openai') {
+      fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(data.error.message);
+          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+          cb(null, text.trim());
+        })
+        .catch(function (e) { cb(e.message); });
+    } else if (config.provider === 'anthropic') {
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': config.key, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 256,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(data.error.message);
+          var text = (data.content && data.content[0] && data.content[0].text) || '';
+          cb(null, text.trim());
+        })
+        .catch(function (e) { cb(e.message); });
+    } else {
+      cb('Unknown provider');
+    }
+  }
+
+  function translateEnglishToHindiRoman(config, english, cb) {
+    var prompt = 'Translate the following English word or phrase to Hindi. Output ONLY the Hindi translation in roman (Latin) script, nothing else. No explanation, no quotes. Word or phrase: ' + english;
+    if (config.provider === 'openai') {
+      fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(data.error.message);
+          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+          cb(null, (text || '').trim());
+        })
+        .catch(function (e) { cb(e.message); });
+    } else if (config.provider === 'anthropic') {
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': config.key, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 256,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(data.error.message);
+          var text = (data.content && data.content[0] && data.content[0].text) || '';
+          cb(null, (text || '').trim());
+        })
+        .catch(function (e) { cb(e.message); });
+    } else {
+      cb('Unknown provider');
+    }
+  }
+
+  var ROMAN_ONLY_INSTRUCTION = 'CRITICAL: In your "feedback" text you must write every Hindi phrase using ONLY Roman/Latin letters (a-z). Do NOT use Devanagari script at all (no characters like म न ग ि ट र etc). Example: write "main guitar bajata hoon" or "main guitar bajati hoon" — never the Devanagari form.';
+
+  function checkPhraseWithApi(config, phrase, cb) {
+    var prompt = ROMAN_ONLY_INSTRUCTION + '\n\nYou are a Hindi language tutor. The user wrote: ' + JSON.stringify(phrase) + '\n\nTranslate it: if it is in English, give the Hindi translation; if it is in Hindi (any script), give the English translation. Reply with ONLY a JSON object, no markdown, with keys "correct" (boolean, always true if you provide a translation) and "feedback" (string). Put the translation and a brief explanation in "feedback". Write any Hindi in ROMAN letters only. Do not add a sentence in Hindi that means "that is how you say [phrase] in Hindi"; only give the translation and a brief English explanation. Never use Devanagari in the feedback.';
+    if (config.provider === 'openai') {
+      fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'When you output Hindi phrases, you must write them only in Roman/Latin script (e.g. main guitar bajata hoon). Never use Devanagari characters (no ॐ-ॿ).' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.2
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(null, data.error.message || 'API error');
+          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+          parseFeedback(text, cb);
+        })
+        .catch(function (e) { cb(null, e.message || 'Network error'); });
+    } else if (config.provider === 'anthropic') {
+      fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': config.key,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-haiku-20241022',
+          max_tokens: 512,
+          system: 'When you output Hindi phrases, write them only in Roman/Latin script (e.g. main guitar bajata hoon). Never use Devanagari characters.',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.error) return cb(null, data.error.message || 'API error');
+          var text = (data.content && data.content[0] && data.content[0].text) || '';
+          parseFeedback(text, cb);
+        })
+        .catch(function (e) { cb(null, e.message || 'Network error'); });
+    } else {
+      cb(null, 'Unknown provider');
+    }
+  }
+
+  function stripDevanagariFromFeedback(str) {
+    if (!str) return str;
+    var hasDevanagari = /[\u0900-\u097F]/.test(str);
+    if (!hasDevanagari) return str;
+    var out;
+    try {
+      out = str.replace(/\p{Script=Devanagari}+/gu, ' [Hindi in roman letters] ');
+    } catch (e) {
+      out = str.replace(/[\u0900-\u097F\u200C\u200D]+/g, ' [Hindi in roman letters] ');
+    }
+    return out.replace(/\s+/g, ' ').trim();
+  }
+
+  function parseFeedback(text, cb) {
+    try {
+      var cleaned = text.trim().replace(/^```\w*\n?|\n?```$/g, '');
+      var j = JSON.parse(cleaned);
+      var feedback = (j.feedback || '').trim() || 'No translation returned.';
+      feedback = stripDevanagariFromFeedback(feedback);
+      cb({ correct: !!j.correct, feedback: feedback });
+    } catch (e) {
+      cb({ correct: false, feedback: text.trim() || 'Could not parse response.' });
+    }
+  }
+
+  var knownPhrases = [
+    { roman: 'namaste', devanagari: 'नमस्ते' },
+    { roman: 'aap kaise hain', devanagari: 'आप कैसे हैं' },
+    { roman: 'main theek hoon', devanagari: 'मैं ठीक हूँ' },
+    { roman: 'dhanyavaad', devanagari: 'धन्यवाद' },
+    { roman: 'ladka pani pi raha hai', devanagari: 'लड़का पानी पी रहा है' },
+    { roman: 'ladki kitaab padh rahi hai', devanagari: 'लड़की किताब पढ़ रही है' }
+  ];
+
+  function showListResult() {
+    var raw = phraseInput.value.trim();
+    var devanagari = toDevanagariIfRoman(raw);
+    var normalizedInput = normalizeForCompare(raw);
+    var normalizedDev = normalizeForCompare(devanagari);
+    for (var i = 0; i < knownPhrases.length; i++) {
+      var p = knownPhrases[i];
+      if (normalizeForCompare(p.devanagari) === normalizedDev ||
+          normalizeForCompare(p.roman) === normalizedInput ||
+          normalizeForCompare(transliterate(p.roman)) === normalizedDev) {
+        checkResult.innerHTML = 'Translation: <span class="devanagari-part">' + escapeHtml(p.devanagari) + '</span>';
+        checkResult.className = 'result-box info';
+        return;
+      }
+    }
+    checkResult.innerHTML = 'Translation: <span class="devanagari-part">' + escapeHtml(devanagari) + '</span>. Add an API key above for English ↔ Hindi translation.';
+    checkResult.className = 'result-box info';
+  }
+
+  function checkPhrase() {
+    var raw = phraseInput.value.trim();
+    if (!raw) {
+      checkResult.textContent = 'Type a phrase first.';
+      checkResult.className = 'result-box info';
+      return;
+    }
+    var config = getApiConfig();
+    if (!config) {
+      showListResult();
+      return;
+    }
+    var isEnglishInput = looksLikeEnglish(raw);
+    doCheckBtn.disabled = true;
+    checkResult.textContent = 'Translating…';
+    checkResult.className = 'result-box info';
+    checkPhraseWithApi(config, raw, function (result, err) {
+      doCheckBtn.disabled = false;
+      if (err) {
+        checkResult.textContent = 'API error: ' + err + '. Falling back to list.';
+        checkResult.className = 'result-box info';
+        showListResult();
+        return;
+      }
+      var rawFeedback = result.feedback || '';
+      if (isEnglishInput && rawFeedback) {
+        var hindiThatIsHow = /(यही|yahi|is tarah).*?(हिंदी में|hindi mein).*?(कैसे कहते|kaise kehte)/i;
+        if (hindiThatIsHow.test(rawFeedback)) {
+          rawFeedback = rawFeedback.split(/\n|[।.]\s+/).filter(function (s) {
+            return !/(हिंदी में|hindi mein).*?(कैसे कहते|kaise kehte)|(यही|yahi).*?(हिंदी में|hindi mein)/i.test(s.trim());
+          }).join('. ').trim();
+        }
+      }
+      var feedback = rawFeedback ? escapeHtml(rawFeedback) : 'No translation returned.';
+      if (isEnglishInput && result.feedback) {
+        feedback += ' That is how you say \'' + escapeHtml(raw) + '\' in Hindi.';
+      }
+      checkResult.innerHTML = feedback;
+      checkResult.className = 'result-box info';
+    });
+  }
+
+  function escapeHtml(s) {
+    var div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  $('doCheck').addEventListener('click', checkPhrase);
+
+  (function initPrepositions() {
+    var dropZone = $('prepositionDropZone');
+    var draggable = $('prepositionDraggable') || $('prepositionBird');
+    var prepositionAnswer = $('prepositionAnswer');
+    var prepositionResult = $('prepositionResult');
+    var checkPrepositionBtn = $('checkPreposition');
+    var prevBtn = $('prepositionPrev');
+    var nextBtn = $('prepositionNext');
+    var bgImg = $('prepositionBgImg');
+    var dragImg = $('prepositionDragImg');
+    var dropLabel = $('prepositionDropLabel');
+    var titleEl = $('prepositionTitle');
+    var hintEl = $('prepositionHint');
+    var instructionEl = $('prepositionInstruction');
+    var sentenceLabel = document.querySelector('label[for="prepositionAnswer"]');
+    if (!dropZone || !draggable) return;
+
+    var BRANCH_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Cpath d='M20 60 Q60 40 100 55 Q140 30 180 50' fill='none' stroke='%236b4423' stroke-width='8' stroke-linecap='round'/%3E%3Cellipse cx='40' cy='55' rx='18' ry='8' fill='%232d5a27'/%3E%3Cellipse cx='100' cy='45' rx='22' ry='10' fill='%232d5a27'/%3E%3Cellipse cx='160' cy='48' rx='16' ry='7' fill='%232d5a27'/%3E%3C/svg%3E";
+    var BIRD_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 60'%3E%3Cellipse cx='40' cy='35' rx='18' ry='14' fill='%23d97706'/%3E%3Cellipse cx='40' cy='33' rx='15' ry='11' fill='%23f59e0b'/%3E%3Ccircle cx='52' cy='22' r='10' fill='%23d97706'/%3E%3Ccircle cx='52' cy='21' r='8' fill='%23f59e0b'/%3E%3Ccircle cx='55' cy='19' r='3' fill='%23fff'/%3E%3Ccircle cx='56' cy='19' r='1.5' fill='%23000'/%3E%3Cpath d='M62 21 L72 19 L62 23 Z' fill='%23ea580c'/%3E%3Cpath d='M25 38 L15 45 L18 38 Z' fill='%23d97706'/%3E%3Cpath d='M35 48 L30 58 L38 50 Z' fill='%23d97706'/%3E%3Cpath d='M45 48 L42 58 L48 50 Z' fill='%23d97706'/%3E%3Cpath d='M22 30 Q10 25 5 35' fill='none' stroke='%23d97706' stroke-width='3'/%3E%3Cpath d='M22 35 Q12 32 8 40' fill='none' stroke='%23d97706' stroke-width='2'/%3E%3Cpath d='M48 18 Q52 12 56 14' fill='none' stroke='%23f59e0b' stroke-width='1'/%3E%3C/svg%3E";
+    var LION_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'%3E%3Ccircle cx='50' cy='40' r='30' fill='%23b45309'/%3E%3Ccircle cx='50' cy='40' r='22' fill='%23d97706'/%3E%3Ccircle cx='50' cy='42' r='18' fill='%23f59e0b'/%3E%3Cellipse cx='50' cy='52' rx='10' ry='6' fill='%23fbbf24'/%3E%3Ccircle cx='50' cy='50' r='4' fill='%23d97706'/%3E%3Cellipse cx='44' cy='48' rx='3' ry='2' fill='%23fbbf24'/%3E%3Cellipse cx='56' cy='48' rx='3' ry='2' fill='%23fbbf24'/%3E%3Ccircle cx='42' cy='38' r='4' fill='%23fff'/%3E%3Ccircle cx='58' cy='38' r='4' fill='%23fff'/%3E%3Ccircle cx='43' cy='38' r='2' fill='%23000'/%3E%3Ccircle cx='59' cy='38' r='2' fill='%23000'/%3E%3Cpath d='M35 28 L32 18 L38 25 Z' fill='%23d97706'/%3E%3Cpath d='M65 28 L68 18 L62 25 Z' fill='%23d97706'/%3E%3Cpath d='M45 55 Q50 60 55 55' fill='none' stroke='%23000' stroke-width='1.5'/%3E%3Cpath d='M38 45 Q36 42' fill='none' stroke='%23000' stroke-width='0.8'/%3E%3Cpath d='M62 45 Q64 42' fill='none' stroke='%23000' stroke-width='0.8'/%3E%3Cpath d='M35 44 L28 43 M35 46 L27 47 M35 48 L29 50' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M65 44 L72 43 M65 46 L73 47 M65 48 L71 50' stroke='%23000' stroke-width='0.5'/%3E%3C/svg%3E";
+    var GRASS_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 60'%3E%3Crect width='200' height='60' fill='%231a472a'/%3E%3Cpath d='M10 60 L15 20 L20 60 M30 60 L35 25 L40 60 M50 60 L55 15 L60 60 M70 60 L75 30 L80 60 M90 60 L95 22 L100 60 M110 60 L115 28 L120 60 M130 60 L135 18 L140 60 M150 60 L155 24 L160 60 M170 60 L175 26 L180 60 M190 60 L195 20 L200 60' fill='none' stroke='%232d5a27' stroke-width='2'/%3E%3C/svg%3E";
+    var CLOUD_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 40'%3E%3Cellipse cx='35' cy='24' rx='28' ry='14' fill='%23e6edf3'/%3E%3Cellipse cx='22' cy='26' rx='14' ry='10' fill='%23e6edf3'/%3E%3Cellipse cx='48' cy='26' rx='14' ry='10' fill='%23e6edf3'/%3E%3C/svg%3E";
+    var SKY_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' fill='%234a6fa5'/%3E%3C/svg%3E";
+    var SKY_PLAIN_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' fill='%234a6fa5'/%3E%3C/svg%3E";
+    var ROAD_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' fill='%23555'/%3E%3Crect x='0' y='35' width='200' height='20' fill='%23333'/%3E%3Cpath d='M0 45 L200 45 M0 55 L200 55' stroke='%23fff' stroke-width='2' opacity='0.5'/%3E%3C/svg%3E";
+    var SNAKE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40'%3E%3Cpath d='M5 20 Q15 8 30 18 Q45 28 60 15 Q75 5 85 18' fill='none' stroke='%2316a34a' stroke-width='8' stroke-linecap='round'/%3E%3Cpath d='M5 20 Q15 8 30 18 Q45 28 60 15 Q75 5 85 18' fill='none' stroke='%2322c55e' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='88' cy='18' r='6' fill='%2316a34a'/%3E%3Ccircle cx='88' cy='17' r='5' fill='%2322c55e'/%3E%3Ccircle cx='90' cy='15' r='1.5' fill='%23000'/%3E%3Cpath d='M94 18 L98 15 L98 21 Z' fill='%23dc2626'/%3E%3Cpath d='M20 16 Q22 14 24 16 M40 20 Q42 18 44 20 M65 12 Q67 10 69 12' fill='none' stroke='%23166534' stroke-width='1.5'/%3E%3C/svg%3E";
+    var LEAVES_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 50'%3E%3Cellipse cx='20' cy='28' rx='12' ry='18' fill='%232d5a27' transform='rotate(-20 20 28)'/%3E%3Cellipse cx='35' cy='25' rx='14' ry='20' fill='%23368a3e' transform='rotate(5 35 25)'/%3E%3Cellipse cx='50' cy='28' rx='11' ry='16' fill='%232d5a27' transform='rotate(25 50 28)'/%3E%3C/svg%3E";
+    var SUN_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Ccircle cx='30' cy='30' r='16' fill='%23fbbf24'/%3E%3Cpath d='M30 8 L30 2 M30 52 L30 58 M8 30 L2 30 M52 30 L58 30 M16 16 L12 12 M44 44 L48 48 M16 44 L12 48 M44 16 L48 12' stroke='%23f59e0b' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E";
+    var exercises = [
+      { title: 'Preposition: par (on)', hint: 'Drag the bird onto the branch.', prep: 'par', subjectRe: /\b(chiriya|chidiya)\b/, objectRe: /\b(perh|daal|dal)\b/, example: 'chiriya perh par hai', exampleDev: '\u091A\u093F\u0921\u093C\u093F\u092F\u093E \u092A\u0947\u0921\u093C \u092A\u0930 \u0939\u0948', bgImg: BRANCH_SVG, dragImg: BIRD_SVG, dropLabel: '↓ drop bird here' },
+      { title: 'Preposition: mein (in)', hint: 'Drag the lion into the grass.', prep: 'mein', subjectRe: /\b(sher|lion)\b/, objectRe: /\b(ghaas|ghas|grass)\b/, example: 'sher ghaas mein hai', exampleDev: '\u0936\u0947\u0930 \u0918\u093E\u0938 \u092E\u0947\u0928 \u0939\u0948', bgImg: GRASS_SVG, dragImg: LION_SVG, dropLabel: '↓ drop lion here' },
+      { title: 'Preposition: mein (in)', hint: 'Drag the cloud into the sky.', prep: 'mein', subjectRe: /\b(badal|cloud)\b/, objectRe: /\b(aasman|akash|sky)\b/, example: 'badal aasman mein hai', exampleDev: '\u092C\u093E\u0926\u0932 \u0906\u0938\u092E\u093E\u0928 \u092E\u0947\u0928 \u0939\u0948', bgImg: SKY_PLAIN_SVG, dragImg: CLOUD_SVG, dropLabel: '↓ drop cloud here' },
+      { title: 'Preposition: par (on)', hint: 'Drag the snake onto the road.', prep: 'par', subjectRe: /\b(saanp|sarp|snake)\b/, objectRe: /\b(sadak|road)\b/, example: 'saanp sadak par hai', exampleDev: '\u0938\u093E\u0902\u092A \u0938\u0921\u093C\u0915 \u092A\u0930 \u0939\u0948', bgImg: ROAD_SVG, dragImg: SNAKE_SVG, dropLabel: '↓ drop snake here' },
+      { title: 'Preposition: par (on)', hint: 'Drag the leaves onto the grass.', prep: 'par', subjectRe: /\b(patte|leaves|patta)\b/, objectRe: /\b(ghaas|ghas|grass)\b/, example: 'patte ghaas par hain', exampleDev: '\u092A\u0924\u094D\u0924\u0947 \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948\u0902', bgImg: GRASS_SVG, dragImg: LEAVES_SVG, dropLabel: '↓ drop leaves here' },
+      { title: 'Preposition: mein (in)', hint: 'Drag the sun into the sky.', prep: 'mein', subjectRe: /\b(suraj|sun)\b/, objectRe: /\b(aasman|akash|sky)\b/, example: 'suraj aasman mein hai', exampleDev: '\u0938\u0942\u0930\u091C \u0906\u0938\u092E\u093E\u0928 \u092E\u0947\u0928 \u0939\u0948', bgImg: SKY_PLAIN_SVG, dragImg: SUN_SVG, dropLabel: '↓ drop sun here' }
+    ];
+    var currentPrepositionIndex = 0;
+    function renderPrepositionExercise() {
+      var ex = exercises[currentPrepositionIndex];
+      if (titleEl) titleEl.textContent = ex.title;
+      if (hintEl) hintEl.textContent = ex.hint;
+      if (instructionEl) instructionEl.textContent = 'Order: subject + noun + preposition. ' + (ex.prep === 'mein' ? "Use 'mein' for 'in'." : "Use 'par' for 'on'.");
+      if (sentenceLabel) sentenceLabel.textContent = 'Sentence (use \'' + ex.prep + '\' for ' + (ex.prep === 'mein' ? "'in'):" : "'on'):");
+      if (bgImg) bgImg.src = ex.bgImg;
+      if (dragImg) dragImg.src = ex.dragImg;
+      if (dropLabel) dropLabel.textContent = ex.dropLabel;
+      dropZone.classList.remove('dropped');
+      draggable.classList.remove('dropped-in');
+      prepositionAnswer.value = '';
+      prepositionAnswer.placeholder = '';
+      prepositionResult.textContent = '';
+      prepositionResult.className = 'result-box';
+      if (prevBtn) prevBtn.disabled = currentPrepositionIndex === 0;
+      if (nextBtn) nextBtn.disabled = currentPrepositionIndex === exercises.length - 1;
+    }
+
+    draggable.setAttribute('draggable', 'true');
+    draggable.addEventListener('dragstart', function (e) {
+      e.dataTransfer.setData('text/plain', 'item');
+      e.dataTransfer.effectAllowed = 'move';
+      draggable.classList.add('dragging');
+    });
+    draggable.addEventListener('dragend', function () {
+      draggable.classList.remove('dragging');
+    });
+
+    dropZone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', function () {
+      dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      if (e.dataTransfer.getData('text/plain') === 'item') {
+        dropZone.classList.add('dropped');
+        draggable.classList.add('dropped-in');
+      }
+    });
+
+    var parAnswerRoman = 'chidiya daal par hai';
+    var parAnswerDev = 'चिड़िया डाल पर है';
+    function normalizePreposition(s) {
+      return (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+    checkPrepositionBtn.addEventListener('click', function () {
+      var raw = prepositionAnswer.value.trim();
+      if (!raw) {
+        prepositionResult.textContent = 'Type the sentence.';
+        prepositionResult.className = 'result-box info';
+        return;
+      }
+      var norm = normalizePreposition(raw);
+      var hasPar = /par/.test(norm) || /\u092A\u0930/.test(raw);
+      var parSubjectRe = /\b(chiriya|chidiya)\b/;
+      var parObjectRe = /\b(perh|daal|dal)\b/;
+      function wordOrderCorrect(n, subR, objR, prep) {
+        var words = n.split(/\s+/);
+        var si = -1, oi = -1, pi = -1;
+        for (var w = 0; w < words.length; w++) {
+          if (subR.test(words[w])) si = si < 0 ? w : si;
+          if (objR.test(words[w])) oi = oi < 0 ? w : oi;
+          if (prep === 'par' && (words[w] === 'par' || /\u092A\u0930/.test(words[w]))) pi = w;
+          if (prep === 'mein' && (words[w] === 'mein' || /\u092E\u0947\u0928/.test(words[w]))) pi = w;
+        }
+        return pi > si && pi > oi && si >= 0 && oi >= 0 && pi >= 0;
+      }
+      var ex = exercises[currentPrepositionIndex];
+      var hasPrep = (ex.prep === 'par' && (/par/.test(norm) || /\u092A\u0930/.test(raw))) || (ex.prep === 'mein' && (/mein/.test(norm) || /\u092E\u0947\u0928/.test(raw)));
+      if (!hasPrep) {
+        prepositionResult.innerHTML = 'Use "' + ex.prep + '". Correct order: subject + noun + ' + ex.prep + '. Example: <span class="devanagari-part">' + ex.exampleDev + '</span> (' + ex.example + ').';
+        prepositionResult.className = 'result-box incorrect';
+        return;
+      }
+      if (!wordOrderCorrect(norm, ex.subjectRe, ex.objectRe, ex.prep)) {
+        prepositionResult.textContent = 'Incorrect order. "' + ex.prep + '" must come after subject and noun.';
+        prepositionResult.className = 'result-box incorrect';
+        return;
+      }
+      prepositionResult.innerHTML = 'Correct! <span class="devanagari-part">' + (transliterate(ex.example) || ex.exampleDev) + '</span>';
+      prepositionResult.className = 'result-box correct';
+    });
+    if (prevBtn) prevBtn.addEventListener('click', function () { if (currentPrepositionIndex > 0) { currentPrepositionIndex--; renderPrepositionExercise(); } });
+    if (nextBtn) nextBtn.addEventListener('click', function () { if (currentPrepositionIndex < exercises.length - 1) { currentPrepositionIndex++; renderPrepositionExercise(); } });
+    renderPrepositionExercise();
+  })();
+
+  var testSelect = $('testSelect');
+  var testArea = $('testArea');
+  var imagesRow = $('imagesRow');
+  var testAnswer = $('testAnswer');
+  var testResult = $('testResult');
+  var currentTest = null;
+
+  var defaultTests = [
+    { id: 'boy-drinking', title: 'In the morning, he is drinking water.', images: ['https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=120&h=120&fit=crop'], answer: '\u0938\u0941\u092C\u0939 \u092E\u0947\u0928 \u0935\u0939 \u092A\u093E\u0928\u0940 \u092A\u0940 \u0930\u0939\u093E \u0939\u0948', answerRoman: 'subah mein vah pani pi raha hai' },
+    { id: 'girl-reading', title: 'In the afternoon, she is reading a book.', images: ['https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop'], answer: '\u0926\u094B\u092A\u0939\u0930 \u092E\u0947\u0928 \u0935\u0939 \u0915\u093F\u0924\u093E\u092C \u092A\u0922\u093C \u0930\u0939\u0940 \u0939\u0948', answerRoman: 'dopahar mein vah kitaab padh rahi hai' },
+    { id: 'girl-playing-guitar', title: 'Girl playing guitar', images: ['https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=120&h=120&fit=crop'], answer: 'लड़की गिटार बजा रही है', answerRoman: 'ladki guitar baja rahi hai' },
+    { id: 'my-name-is', title: 'My name is ___', images: ['https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&h=120&fit=crop'], answer: 'मेरा नाम ___ है', answerRoman: 'mera naam ___ hai' },
+    { id: 'i-like-apples', title: 'I like apples', images: ['https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=120&h=120&fit=crop'], answer: 'मुझे सेब पसंद हैं', answerRoman: 'mujhe seb pasand hain' },
+    { id: 'namaste', title: 'Greeting (Namaste)', images: ['https://images.unsplash.com/photo-1605640840605-14a117e1b9b0?w=120&h=120&fit=crop'], answer: 'नमस्ते', answerRoman: 'namaste' },
+    { id: 'what-sunita-doing', title: 'What is Sunita doing?', images: ['https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&h=120&fit=crop'], answer: '\u0938\u0941\u0928\u0940\u0924\u093E \u0915\u094D\u092F\u093E \u0915\u0930 \u0930\u0939\u0940 \u0939\u0948?', answerRoman: 'Sunita kya kar rahi hai' },
+    { id: 'we-sleeping', title: 'We are sleeping.', images: ['https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?w=120&h=120&fit=crop'], answer: '\u0939\u092E \u0938\u094B \u0930\u0939\u0947 \u0939\u0948\u0902', answerRoman: 'hum so rahe hain' },
+    { id: 'ravi-flute', title: 'Ravi is playing the flute.', images: ['https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&h=120&fit=crop'], answer: '\u0930\u0935\u093F \u092C\u093E\u0902\u0938\u0941\u0930\u0940 \u092C\u091C\u093E \u0930\u0939\u093E \u0939\u0948', answerRoman: 'Ravi baansuri baja raha hai' },
+    { id: 'is-it-raining', title: 'Is it raining there?', images: ['https://images.unsplash.com/photo-1509635022432-0220ac12960b?w=120&h=120&fit=crop'], answer: '\u0935\u0939\u093E\u0902 \u092C\u093E\u0930\u093F\u0936 \u0939\u094B \u0930\u0939\u0940 \u0939\u0948 \u0915\u094D\u092F\u093E?', answerRoman: 'vahaan barish ho rahi hai kya' },
+    { id: 'do-you-like-rain', title: 'Do you like the rain?', images: ['https://images.unsplash.com/photo-1509635022432-0220ac12960b?w=120&h=120&fit=crop'], answer: '\u0915\u094D\u092F\u093E \u0906\u092A\u0915\u094B \u092C\u093E\u0930\u093F\u0936 \u092A\u0938\u0902\u0926 \u0939\u0948?', answerRoman: 'kya aapko barish pasand hai' },
+    { id: 'my-moms-name-gunjun', title: "My mom's name is Gunjun.", images: ['https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop'], answer: '\u092E\u0947\u0930\u0940 \u092E\u093E\u0902 \u0915\u093E \u0928\u093E\u092E \u0917\u0941\u0902\u091C\u0928 \u0939\u0948', answerRoman: 'meri maa ka naam Gunjun hai' },
+    { id: 'i-am-happy', title: 'I am happy', images: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop'], answer: 'मैं खुश हूँ', answerRoman: 'main khush hoon' },
+    { id: 'i-like-tea', title: 'I like tea in the evening.', images: ['https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=120&h=120&fit=crop'], answer: '\u092E\u0941\u091D\u0947 \u0936\u093E\u092E \u0915\u094B \u091A\u093E\u092F \u092A\u0938\u0902\u0926 \u0939\u0948', answerRoman: 'mujhe shaam ko chai pasand hai' },
+    { id: 'cat-sleeping', title: 'The cat is sleeping', images: ['https://images.unsplash.com/photo-1514888286974-6d038452eefb?w=120&h=120&fit=crop'], answer: 'बिल्ली सो रही है', answerRoman: 'billi so rahi hai' },
+    { id: 'good-morning', title: 'Good morning', images: ['https://images.unsplash.com/photo-1495616811223-4d98c6e1c869?w=120&h=120&fit=crop'], answer: 'सुप्रभात', answerRoman: 'suprabhaat' },
+    { id: 'thank-you', title: 'Thank you', images: ['https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=120&h=120&fit=crop'], answer: 'धन्यवाद', answerRoman: 'dhanyavaad' },
+    { id: 'snake-on-road', title: 'The snake is on the road.', images: ['https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=120&h=120&fit=crop'], answer: 'साँप सड़क पर है', answerRoman: 'saanp sadak par hai' },
+    { id: 'i-dont-like-oranges', title: "I don't like oranges.", images: ['https://images.unsplash.com/photo-1547514701-42782101795e?w=120&h=120&fit=crop'], answer: 'मुझे संतरे पसंद नहीं हैं', answerRoman: 'mujhe santre pasand nahin hain' },
+    { id: 'lion-is-orange', title: 'The lion is orange.', images: ['https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=120&h=120&fit=crop'], answer: 'शेर नारंगी है', answerRoman: 'sher narangi hai' },
+    { id: 'sunita-dancing', title: 'Sunita is doing the dance.', images: ['https://images.unsplash.com/photo-1524368535928-5d5e35461bb4?w=120&h=120&fit=crop'], answer: 'सुनीता नाच कर रही है', answerRoman: 'Sunita naach kar rahi hai' },
+    { id: 'june-india', title: 'In June we are going to India.', images: ['https://images.unsplash.com/photo-1564507592333-c60657eea523?w=120&h=120&fit=crop'], answer: 'जून में हम भारत जा रहे हैं', answerRoman: 'jun mein hum bharat ja rahe hain' },
+    { id: 'what-is-your-name', title: 'What is your name?', images: ['https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&h=120&fit=crop'], answer: 'आपका नाम क्या है?', answerRoman: 'aapka naam kya hai' },
+    { id: 'how-are-you', title: 'How are you?', images: ['https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=120&h=120&fit=crop'], answer: 'आप कैसे हैं?', answerRoman: 'aap kaise hain' },
+    { id: 'water-is-hot', title: 'The water is hot.', images: ['https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=120&h=120&fit=crop', 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=120&h=120&fit=crop'], answer: '\u092A\u093E\u0928\u0940 \u0917\u0930\u094D\u092E \u0939\u0948', answerRoman: 'pani garam hai' },
+    { id: 'tea-is-cold', title: 'The tea is cold.', images: ['https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?w=120&h=120&fit=crop', 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=120&h=120&fit=crop'], answer: '\u091A\u093E\u092F \u0920\u0902\u0921\u0940 \u0939\u0948', answerRoman: 'chai thandi hai' }
+  ];
+  var tests = defaultTests.slice();
+
+  function fillTestSelect() {
+    testSelect.innerHTML = '<option value="">-- Select test --</option>';
+    tests.forEach(function (t) {
+      var opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.title;
+      testSelect.appendChild(opt);
+    });
+  }
+
+  function loadTests() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'tests.json?v=2');
+    xhr.onload = function () {
+      try {
+        var loaded = JSON.parse(xhr.responseText);
+        if (loaded && loaded.length) tests = loaded;
+      } catch (e) {}
+      fillTestSelect();
+    };
+    xhr.onerror = function () {
+      tests = defaultTests.slice();
+      fillTestSelect();
+    };
+    xhr.send();
+  }
+  fillTestSelect();
+
+  $('startTest').addEventListener('click', function () {
+    var id = testSelect.value;
+    if (!id) return;
+    currentTest = tests.find(function (t) { return t.id === id; });
+    if (!currentTest) return;
+    imagesRow.innerHTML = '';
+    currentTest.images.forEach(function (url) {
+      var wrap = document.createElement('div');
+      wrap.className = 'img-wrap';
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      img.loading = 'lazy';
+      wrap.appendChild(img);
+      imagesRow.appendChild(wrap);
+    });
+    testAnswer.value = '';
+    testResult.textContent = '';
+    testResult.className = 'result-box';
+    testArea.classList.remove('hidden');
+  });
+
+  $('submitTest').addEventListener('click', function () {
+    if (!currentTest) return;
+    var raw = testAnswer.value.trim();
+    if (!raw) {
+      testResult.textContent = 'Type your answer first.';
+      testResult.className = 'result-box info';
+      return;
+    }
+    var userDev = toDevanagariIfRoman(raw);
+    var normUser = normalizeForCompare(userDev);
+    var normAnswer = normalizeForCompare(currentTest.answer);
+    var normAnswerRoman = normalizeForCompare(transliterate(currentTest.answerRoman));
+
+    var correct = normUser === normAnswer || normUser === normAnswerRoman || normalizeForCompare(raw) === normalizeForCompare(currentTest.answerRoman);
+
+    if (currentTest.id === 'my-moms-name-gunjun') {
+      var normMaa = normalizeForCompare('meri maa ka naam Gunjun hai');
+      var normMummy = normalizeForCompare('meri mummy ka naam Gunjun hai');
+      var normMummyka = normalizeForCompare('meri mummyka naam Gunjun hai');
+      var rawNorm = normalizeForCompare(raw);
+      correct = correct || normUser === normMaa || normUser === normMummy || normUser === normMummyka || rawNorm === normMaa || rawNorm === normMummy || rawNorm === normMummyka;
+    }
+
+    if (correct) {
+      testResult.innerHTML = 'Correct. <span class="devanagari-part">' + escapeHtml(currentTest.answer) + '</span>';
+      testResult.className = 'result-box correct';
+    } else {
+      testResult.innerHTML = 'Not quite. Correct: <span class="devanagari-part">' + escapeHtml(currentTest.answer) + '</span> (' + escapeHtml(currentTest.answerRoman) + ')';
+      testResult.className = 'result-box incorrect';
+    }
+  });
+
+  (function initPronunciation() {
+    var speakBtn = $('speakPronunciation');
+    var statusEl = $('pronunciationStatus');
+    var heardEl = $('pronunciationHeard');
+    var resultEl = $('pronunciationResult');
+    var imgEl = $('pronunciationImage');
+    var prevBtn = $('pronunciationPrev');
+    var nextBtn = $('pronunciationNext');
+    if (!speakBtn || !statusEl || !heardEl || !resultEl || !imgEl || !prevBtn || !nextBtn) return;
+
+    var scenes = [
+      {
+        id: 'fruit-bowl',
+        img: 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?w=640&h=360&fit=crop',
+        answer: 'कटोरे में बहुत फल हैं। सेब लाल है। केला पीला है। अंगूर हरे हैं।',
+        roman: 'katore mein bahut phal hain. seb laal hai. kela peela hai. angoor hare hain'
+      },
+      {
+        id: 'mountain-landscape',
+        img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=640&h=360&fit=crop',
+        answer: 'पहाड़ बड़े हैं। आसमान नीला है। बादल सफेद हैं। पेड़ हरे हैं। घास हरी है।',
+        roman: 'pahad bade hain. aasmaan neela hai. baadal safed hain. ped hare hain. ghas hari hai'
+      },
+      {
+        id: 'sheep-field',
+        img: 'https://images.unsplash.com/photo-1484557985045-edf25e08da73?w=640&h=360&fit=crop',
+        answer: 'बहुत भेड़ें हैं। भेड़ें सफेद हैं। घास हरी है। वे खा रही हैं।',
+        roman: 'bahut bheden hain. bheden safed hain. ghas hari hai. ve kha rahi hain'
+      },
+      {
+        id: 'birds-flying',
+        img: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=640&h=360&fit=crop',
+        answer: 'बहुत पक्षी हैं। पक्षी उड़ रहे हैं। आसमान नीला है।',
+        roman: 'bahut pakshi hain. pakshi ud rahe hain. aasmaan neela hai'
+      },
+      {
+        id: 'vegetable-market',
+        img: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=640&h=360&fit=crop',
+        answer: 'बहुत सब्ज़ियाँ हैं। गाजर नारंगी है। टमाटर लाल हैं। पत्तागोभी हरी है।',
+        roman: 'bahut sabziyan hain. gaajar narangi hai. tamatar laal hain. pattagobhi hari hai'
+      },
+      {
+        id: 'dogs-playing',
+        img: 'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=640&h=360&fit=crop',
+        answer: 'दो कुत्ते हैं। कुत्ते खेल रहे हैं। एक कुत्ता भूरा है। घास हरी है।',
+        roman: 'do kutte hain. kutte khel rahe hain. ek kutta bhoora hai. ghas hari hai'
+      }
+    ];
+    var currentIndex = 0;
+
+    function renderScene() {
+      var scene = scenes[currentIndex];
+      imgEl.src = scene.img;
+      imgEl.alt = '';
+      statusEl.textContent = '';
+      heardEl.textContent = '';
+      resultEl.textContent = '';
+      resultEl.className = 'result-box';
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === scenes.length - 1;
+    }
+
+    prevBtn.addEventListener('click', function () {
+      if (currentIndex > 0) {
+        currentIndex--;
+        renderScene();
+      }
+    });
+    nextBtn.addEventListener('click', function () {
+      if (currentIndex < scenes.length - 1) {
+        currentIndex++;
+        renderScene();
+      }
+    });
+
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      var recognition = new SpeechRecognition();
+      recognition.lang = 'hi-IN';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      var recognizing = false;
+
+      speakBtn.addEventListener('click', function () {
+        if (recognizing) {
+          recognition.stop();
+          return;
+        }
+        statusEl.textContent = 'Listening…';
+        heardEl.textContent = '';
+        resultEl.textContent = '';
+        resultEl.className = 'result-box';
+        recognizing = true;
+        recognition.start();
+      });
+
+      recognition.onresult = function (event) {
+        recognizing = false;
+        var res = event.results && event.results[0] && event.results[0][0];
+        var transcript = (res && res.transcript) || '';
+        if (!transcript) {
+          statusEl.textContent = 'Did not catch that. Try again.';
+          return;
+        }
+        statusEl.textContent = 'Heard sentence below.';
+
+        // Prefer to show what we heard in roman script
+        var hasDevanagari = /[\u0900-\u097F]/.test(transcript);
+        var apiCfg = getApiConfig();
+        if (hasDevanagari && apiCfg) {
+          heardEl.textContent = 'Converting to roman…';
+          devanagariToRomanWithLlm(apiCfg, transcript, function (err, roman) {
+            if (err || !roman) {
+              heardEl.textContent = transcript;
+            } else {
+              heardEl.textContent = roman;
+            }
+          });
+        } else {
+          heardEl.textContent = transcript;
+        }
+
+        var scene = scenes[currentIndex];
+        var targetAnswer = scene.answer;
+        var targetRoman = scene.roman;
+
+        var userDev = toDevanagariIfRoman(transcript);
+        var normUser = normalizeForCompare(userDev);
+        var normAnswer = normalizeForCompare(targetAnswer);
+        var normAnswerRoman = normalizeForCompare(transliterate(targetRoman) || targetRoman);
+
+        if (normUser === normAnswer || normUser === normAnswerRoman) {
+          resultEl.innerHTML = 'Nice! Example sentence: <span class=\"devanagari-part\">' + escapeHtml(targetAnswer) + '</span> (' + escapeHtml(targetRoman) + ').';
+          resultEl.className = 'result-box correct';
+        } else {
+          resultEl.innerHTML = 'Good try. Example sentence: <span class=\"devanagari-part\">' + escapeHtml(targetAnswer) + '</span> (' + escapeHtml(targetRoman) + ').';
+          resultEl.className = 'result-box info';
+        }
+
+        var tConfig = getTranslationConfig();
+        if (tConfig) {
+          var provider = tConfig.provider;
+          var key = tConfig.key;
+          var baseHtml = resultEl.innerHTML;
+          resultEl.innerHTML = baseHtml + '<br/>Checking with ' + (provider === 'google' ? 'Google Translate' : 'DeepL') + '…';
+          var done = function (err, english) {
+            if (err) {
+              resultEl.innerHTML = baseHtml + '<br/>Translation error: ' + escapeHtml(err);
+              return;
+            }
+            if (english) {
+              resultEl.innerHTML = baseHtml + '<br/>Translation: ' + escapeHtml(english);
+            } else {
+              resultEl.innerHTML = baseHtml + '<br/>No translation returned.';
+            }
+          };
+          if (provider === 'google') {
+            translateWithGoogle(userDev, key, done, { source: 'hi', target: 'en' });
+          } else if (provider === 'deepl') {
+            translateWithDeepL(userDev, key, done, { source: 'HI', target: 'EN' });
+          }
+        }
+      };
+
+      recognition.onerror = function (event) {
+        recognizing = false;
+        var msg = event && event.error ? event.error : 'unknown error';
+        statusEl.textContent = 'Speech error: ' + msg;
+      };
+
+      recognition.onend = function () {
+        recognizing = false;
+        if (!statusEl.textContent) {
+          statusEl.textContent = 'No speech detected. Try again.';
+        }
+      };
+    } else {
+      speakBtn.disabled = true;
+      statusEl.textContent = 'Speech recognition is not supported in this browser.';
+    }
+
+    renderScene();
+  })();
+
+  function bindVocabCheck(listId, checkBtnId, resultId, acceptedAlternates) {
+    var list = $(listId);
+    var checkBtn = $(checkBtnId);
+    var resultEl = $(resultId);
+    if (!list || !checkBtn || !resultEl) return;
+    acceptedAlternates = acceptedAlternates || {};
+    list.querySelectorAll('.vocab-input').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        inp.classList.remove('vocab-correct', 'vocab-incorrect');
+        var row = inp.closest('.vocab-row');
+        if (row) {
+          var hint = row.querySelector('.vocab-correct-answer');
+          if (hint) { hint.textContent = ''; hint.classList.remove('visible'); }
+        }
+      });
+    });
+    checkBtn.addEventListener('click', function () {
+      var inputs = list.querySelectorAll('.vocab-input');
+      var correct = 0;
+      var total = inputs.length;
+      list.querySelectorAll('.vocab-correct-answer').forEach(function (h) {
+        h.textContent = '';
+        h.classList.remove('visible');
+      });
+      inputs.forEach(function (inp) {
+        var raw = (inp.value || '').trim();
+        var answer = (inp.getAttribute('data-answer') || '').trim();
+        var answerIsDevanagari = /[\u0900-\u097F]/.test(answer);
+        var ok;
+        if (answerIsDevanagari) {
+          var normUser = normalizeForCompare(toDevanagariIfRoman(raw));
+          var normAnswer = normalizeForCompare(answer);
+          ok = normUser === normAnswer && normUser !== '';
+        } else {
+          var norm = raw.toLowerCase().replace(/\s+/g, ' ');
+          var answerLower = answer.toLowerCase();
+          var english = inp.closest('.vocab-row').querySelector('.vocab-english');
+          var enKey = english ? english.textContent.trim().toLowerCase() : '';
+          var alts = acceptedAlternates[enKey];
+          ok = norm === answerLower || (alts && alts.indexOf(norm) >= 0);
+        }
+        inp.classList.toggle('vocab-correct', ok && raw !== '');
+        inp.classList.toggle('vocab-incorrect', !ok && raw !== '');
+        if (!ok && raw !== '') {
+          var row = inp.closest('.vocab-row');
+          if (row) {
+            var hint = row.querySelector('.vocab-correct-answer');
+            if (!hint) {
+              hint = document.createElement('span');
+              hint.className = 'vocab-correct-answer';
+              hint.setAttribute('aria-live', 'polite');
+              inp.parentNode.insertBefore(hint, inp.nextSibling);
+            }
+            hint.textContent = 'Correct: ' + answer;
+            hint.classList.add('visible');
+          }
+        }
+        if (ok && raw !== '') correct++;
+      });
+      resultEl.textContent = total > 0 ? (correct + ' / ' + total + ' correct.') : '';
+      resultEl.className = 'result-box ' + (correct === total ? 'correct' : correct > 0 ? 'info' : 'incorrect');
+    });
+  }
+  bindVocabCheck('vocabColorsList', 'checkColors', 'vocabColorsResult', { purple: ['baingani', 'jamuni'] });
+  bindVocabCheck('vocabFruitsList', 'checkFruits', 'vocabFruitsResult', { orange: ['santra', 'narangi'], plum: ['alubukhara', 'aloo bukhara'], lychee: ['litchi', 'litchee'], lemon: ['nimbu', 'neebu'], lime: ['nimbu', 'neebu', 'kagzi nimbu'] });
+  bindVocabCheck('vocabVegetablesList', 'checkVegetables', 'vocabVegetablesResult', { cucumber: ['kheera', 'kakdi'], onion: ['pyaaz', 'kanda'], cauliflower: ['gobhi', 'phool gobhi'], 'chili pepper': ['mirch', 'hari mirch'], 'bell pepper': ['shimla mirch', 'shimla mirch'], 'snap pea': ['matar', 'chhirwa'], gourd: ['lauki', 'ghiya'] });
+  bindVocabCheck('vocabNatureList', 'checkNature', 'vocabNatureResult', { grass: ['ghaas', 'ghas'], tree: ['ped', 'perh', 'per'], sky: ['aasman', 'akash'], 'small plant': ['paudha', 'chota paudha', 'paudha'], leaves: ['patte', 'patta'], rain: ['barish', 'barsaat'] });
+  bindVocabCheck('vocabActionVerbsList', 'checkActionVerbs', 'vocabActionVerbsResult', { 'to play (a sport)': ['khelna'], 'to play (an instrument)': ['bajana'], 'to sleep': ['sona', 'sone'], 'to sit': ['baithna'], 'to watch': ['dekhna'], 'to make': ['banana', 'banaana'], 'to read': ['padhna'], 'to eat': ['khana', 'khaana'], 'to drink': ['peena', 'pina'], 'to do': ['karna'] });
+  bindVocabCheck('vocabAnimalsList', 'checkAnimals', 'vocabAnimalsResult', { cow: ['gaay', 'gai'], snake: ['saanp', 'sarp'], bird: ['chiriya', 'chidiya', 'panchi'], bear: ['bhaloo', 'bhalu'], elephant: ['haathi', 'hathi'], horse: ['ghoda', 'ghorah'], giraffe: ['jiraaf', 'jiraf'], cheetah: ['cheetah', 'chita'], peacock: ['mor', 'mayur'], deer: ['hiran'] });
+
+  (function initCustomVocab() {
+    var customInput = $('customVocabInput');
+    var customList = $('vocabCustomList');
+    var buildCustomBtn = $('buildCustomVocab');
+    var customResult = $('vocabCustomResult');
+    var checkCustomBtn = $('checkCustomVocab');
+    if (!customInput || !customList || !buildCustomBtn || !customResult || !checkCustomBtn) return;
+
+    function addCustomRow(english, hindiAnswer) {
+      var li = document.createElement('li');
+      li.className = 'vocab-row';
+      var enSpan = document.createElement('span');
+      enSpan.className = 'vocab-english';
+      enSpan.textContent = english;
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'text-input vocab-input';
+      inp.setAttribute('data-answer', hindiAnswer);
+      inp.placeholder = 'Hindi word';
+      inp.autocomplete = 'off';
+      li.appendChild(enSpan);
+      li.appendChild(inp);
+      customList.appendChild(li);
+      inp.addEventListener('input', function () { inp.classList.remove('vocab-correct', 'vocab-incorrect'); });
+    }
+
+    buildCustomBtn.addEventListener('click', function () {
+      var raw = customInput.value || '';
+      var lines = raw.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l; });
+
+      customList.innerHTML = '';
+      customResult.textContent = '';
+      customResult.className = 'result-box';
+      checkCustomBtn.disabled = true;
+
+      if (lines.length === 0) {
+        customResult.textContent = 'Enter at least one English word or phrase (one per line).';
+        customResult.className = 'result-box info';
+        return;
+      }
+
+      var translationConfig = getTranslationConfig();
+      var apiConfig = getApiConfig();
+
+      if (translationConfig) {
+        var provider = translationConfig.provider;
+        var key = translationConfig.key;
+        var index = 0;
+        buildCustomBtn.disabled = true;
+        customResult.textContent = 'Translating…';
+        customResult.className = 'result-box info';
+
+        function next() {
+          if (index >= lines.length) {
+            buildCustomBtn.disabled = false;
+            customResult.textContent = '';
+            checkCustomBtn.disabled = false;
+            return;
+          }
+          var english = lines[index];
+          customResult.textContent = 'Translating… ' + (index + 1) + '/' + lines.length;
+          var done = function (err, hindi) {
+            if (err) {
+              customResult.textContent = 'Error: ' + err + (index > 0 ? ' (added ' + index + ' so far)' : '');
+              customResult.className = 'result-box incorrect';
+              buildCustomBtn.disabled = false;
+              checkCustomBtn.disabled = !customList.querySelector('.vocab-input');
+              return;
+            }
+            if (hindi) addCustomRow(english, hindi);
+            index++;
+            next();
+          };
+          if (provider === 'google') {
+            translateWithGoogle(english, key, done);
+          } else {
+            translateWithDeepL(english, key, done);
+          }
+        }
+        next();
+        return;
+      }
+
+      if (apiConfig) {
+        var idx = 0;
+        buildCustomBtn.disabled = true;
+        customResult.textContent = 'Translating…';
+        customResult.className = 'result-box info';
+
+        function nextLlm() {
+          if (idx >= lines.length) {
+            buildCustomBtn.disabled = false;
+            customResult.textContent = '';
+            checkCustomBtn.disabled = false;
+            return;
+          }
+          var english = lines[idx];
+          customResult.textContent = 'Translating… ' + (idx + 1) + '/' + lines.length;
+          translateEnglishToHindiRoman(apiConfig, english, function (err, roman) {
+            if (err) {
+              customResult.textContent = 'Error: ' + err + (idx > 0 ? ' (added ' + idx + ' so far)' : '');
+              customResult.className = 'result-box incorrect';
+              buildCustomBtn.disabled = false;
+              checkCustomBtn.disabled = !customList.querySelector('.vocab-input');
+              return;
+            }
+            if (roman) addCustomRow(english, roman);
+            idx++;
+            nextLlm();
+          });
+        }
+        nextLlm();
+        return;
+      }
+
+      customResult.textContent = 'Add an API key (Translate or Script tab) to use custom vocab.';
+      customResult.className = 'result-box info';
+    });
+  })();
+  bindVocabCheck('vocabCustomList', 'checkCustomVocab', 'vocabCustomResult');
+
+  loadTests();
+
+  // Handwriting Practice Section
+  (function initHandwriting() {
+    // Vowels
+    var vowels = [
+      { roman: 'a', devanagari: 'अ' },
+      { roman: 'aa', devanagari: 'आ' },
+      { roman: 'i', devanagari: 'इ' },
+      { roman: 'ee', devanagari: 'ई' },
+      { roman: 'u', devanagari: 'उ' },
+      { roman: 'oo', devanagari: 'ऊ' },
+      { roman: 'e', devanagari: 'ए' },
+      { roman: 'ai', devanagari: 'ऐ' },
+      { roman: 'o', devanagari: 'ओ' },
+      { roman: 'au', devanagari: 'औ' }
+    ];
+    // Consonants
+    var consonants = [
+      { roman: 'ka', devanagari: 'क' },
+      { roman: 'kha', devanagari: 'ख' },
+      { roman: 'ga', devanagari: 'ग' },
+      { roman: 'gha', devanagari: 'घ' },
+      { roman: 'nga', devanagari: 'ङ' },
+      { roman: 'cha', devanagari: 'च' },
+      { roman: 'chha', devanagari: 'छ' },
+      { roman: 'ja', devanagari: 'ज' },
+      { roman: 'jha', devanagari: 'झ' },
+      { roman: 'nya', devanagari: 'ञ' },
+      { roman: 'ṭa', devanagari: 'ट' },
+      { roman: 'ṭha', devanagari: 'ठ' },
+      { roman: 'ḍa', devanagari: 'ड' },
+      { roman: 'ḍha', devanagari: 'ढ' },
+      { roman: 'ṇa', devanagari: 'ण' },
+      { roman: 'ta', devanagari: 'त' },
+      { roman: 'tha', devanagari: 'थ' },
+      { roman: 'da', devanagari: 'द' },
+      { roman: 'dha', devanagari: 'ध' },
+      { roman: 'na', devanagari: 'न' },
+      { roman: 'pa', devanagari: 'प' },
+      { roman: 'pha', devanagari: 'फ' },
+      { roman: 'ba', devanagari: 'ब' },
+      { roman: 'bha', devanagari: 'भ' },
+      { roman: 'ma', devanagari: 'म' },
+      { roman: 'ya', devanagari: 'य' },
+      { roman: 'ra', devanagari: 'र' },
+      { roman: 'la', devanagari: 'ल' },
+      { roman: 'va', devanagari: 'व' },
+      { roman: 'sha', devanagari: 'श' },
+      { roman: 'ṣha', devanagari: 'ष' },
+      { roman: 'sa', devanagari: 'स' },
+      { roman: 'ha', devanagari: 'ह' }
+    ];
+    var hindiAlphabet = vowels.concat(consonants);
+
+    var currentIndex = 0;
+    var isRevealed = false;
+    var attemptCount = 0;
+    var canvas = document.getElementById('hwCanvas');
+    var ctx = canvas.getContext('2d');
+    var isDrawing = false;
+    var lastX = 0;
+    var lastY = 0;
+    var strokes = [];
+    var currentStroke = [];
+
+    var romanEl = document.getElementById('hwRoman');
+    var devanagariEl = document.getElementById('hwDevanagari');
+    var hintEl = document.getElementById('hwHint');
+    var letterDisplay = document.querySelector('.letter-display');
+    var prevBtn = document.getElementById('hwPrev');
+    var nextBtn = document.getElementById('hwNext');
+    var clearBtn = document.getElementById('hwClear');
+    var checkBtn = document.getElementById('hwCheck');
+    var resultEl = document.getElementById('hwResult');
+
+    function updateDisplay() {
+      var letter = hindiAlphabet[currentIndex];
+      romanEl.textContent = letter.roman;
+      devanagariEl.textContent = letter.devanagari;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === hindiAlphabet.length - 1;
+      
+      // Reset to hidden state for new letter
+      isRevealed = false;
+      attemptCount = 0;
+      letterDisplay.classList.remove('revealed');
+      devanagariEl.classList.add('hidden');
+      hintEl.classList.remove('hidden');
+      hintEl.textContent = 'Draw from memory!';
+      
+      clearCanvas();
+      resultEl.textContent = '';
+      resultEl.className = 'result-box';
+    }
+
+    function revealLetter() {
+      isRevealed = true;
+      letterDisplay.classList.add('revealed');
+      devanagariEl.classList.remove('hidden');
+      hintEl.classList.add('hidden');
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      strokes = [];
+      currentStroke = [];
+    }
+
+    function getPos(e) {
+      var rect = canvas.getBoundingClientRect();
+      var scaleX = canvas.width / rect.width;
+      var scaleY = canvas.height / rect.height;
+      if (e.touches && e.touches.length > 0) {
+        return {
+          x: (e.touches[0].clientX - rect.left) * scaleX,
+          y: (e.touches[0].clientY - rect.top) * scaleY
+        };
+      }
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function startDrawing(e) {
+      e.preventDefault();
+      isDrawing = true;
+      var pos = getPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+      currentStroke = [{ x: pos.x, y: pos.y }];
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      var pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      lastX = pos.x;
+      lastY = pos.y;
+      currentStroke.push({ x: pos.x, y: pos.y });
+    }
+
+    function stopDrawing() {
+      if (isDrawing && currentStroke.length > 0) {
+        strokes.push(currentStroke);
+      }
+      isDrawing = false;
+      currentStroke = [];
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    prevBtn.addEventListener('click', function () {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateDisplay();
+      }
+    });
+
+    nextBtn.addEventListener('click', function () {
+      if (currentIndex < hindiAlphabet.length - 1) {
+        currentIndex++;
+        updateDisplay();
+      }
+    });
+
+    clearBtn.addEventListener('click', function () {
+      clearCanvas();
+      resultEl.textContent = '';
+      resultEl.className = 'result-box';
+    });
+
+    checkBtn.addEventListener('click', function () {
+      var letter = hindiAlphabet[currentIndex];
+      var totalPoints = strokes.reduce(function (sum, s) { return sum + s.length; }, 0);
+      
+      if (totalPoints < 10) {
+        resultEl.textContent = 'Please draw the letter "' + letter.roman + '" on the canvas.';
+        resultEl.className = 'result-box info';
+        return;
+      }
+
+      attemptCount++;
+
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var pixels = imageData.data;
+      var inkPixels = 0;
+      var minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+
+      for (var i = 0; i < pixels.length; i += 4) {
+        var r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+        if (r < 200 || g < 200 || b < 200) {
+          inkPixels++;
+          var px = (i / 4) % canvas.width;
+          var py = Math.floor((i / 4) / canvas.width);
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+        }
+      }
+
+      var width = maxX - minX;
+      var height = maxY - minY;
+      var coverage = inkPixels / (canvas.width * canvas.height);
+      var hasEnoughStrokes = strokes.length >= 1;
+      var hasReasonableSize = width > 30 && height > 30;
+      var hasReasonableCoverage = coverage > 0.01 && coverage < 0.5;
+
+      if (isRevealed) {
+        // User is copying after seeing the symbol
+        if (hasEnoughStrokes && hasReasonableSize && hasReasonableCoverage) {
+          resultEl.innerHTML = '✓ Good job copying <span class="devanagari-part">' + letter.devanagari + '</span>! Use the arrows to try the next letter.';
+          resultEl.className = 'result-box correct';
+        } else if (!hasReasonableSize) {
+          resultEl.textContent = 'Try drawing it a bit larger. Look at the symbol above and copy it.';
+          resultEl.className = 'result-box info';
+        } else {
+          resultEl.innerHTML = 'Keep practicing! Try to match <span class="devanagari-part">' + letter.devanagari + '</span> shown above.';
+          resultEl.className = 'result-box info';
+        }
+      } else {
+        // First attempt from memory - reveal and let them compare
+        revealLetter();
+        if (hasEnoughStrokes && hasReasonableSize && hasReasonableCoverage) {
+          resultEl.innerHTML = 'Here\'s <span class="devanagari-part">' + letter.devanagari + '</span> — compare your drawing. Use arrows for next letter.';
+          resultEl.className = 'result-box info';
+        } else if (!hasReasonableSize) {
+          resultEl.innerHTML = 'Here\'s <span class="devanagari-part">' + letter.devanagari + '</span>. Try drawing it a bit larger.';
+          resultEl.className = 'result-box info';
+        } else {
+          resultEl.innerHTML = 'Here\'s <span class="devanagari-part">' + letter.devanagari + '</span>. Clear and try drawing it again!';
+          resultEl.className = 'result-box info';
+        }
+      }
+    });
+
+    updateDisplay();
+  })();
+
+  // Word Practice Section
+  (function initWordPractice() {
+    var words = [
+      { roman: 'raat', devanagari: 'रात', meaning: 'night' },
+      { roman: 'maala', devanagari: 'माला', meaning: 'garland' },
+      { roman: 'haar', devanagari: 'हार', meaning: 'necklace' },
+      { roman: 'tala', devanagari: 'ताला', meaning: 'lock' },
+      { roman: 'khana', devanagari: 'खाना', meaning: 'food' },
+      { roman: 'kal', devanagari: 'कल', meaning: 'yesterday/tomorrow' }
+    ];
+
+    var currentIndex = 0;
+    var isRevealed = false;
+    var canvas = document.getElementById('wordCanvas');
+    var ctx = canvas.getContext('2d');
+    var isDrawing = false;
+    var lastX = 0;
+    var lastY = 0;
+    var strokes = [];
+    var currentStroke = [];
+
+    var romanEl = document.getElementById('wordRoman');
+    var devanagariEl = document.getElementById('wordDevanagari');
+    var hintEl = document.getElementById('wordHint');
+    var meaningEl = document.getElementById('wordMeaning');
+    var wordDisplay = document.getElementById('wordDisplayBox');
+    var prevBtn = document.getElementById('wordPrev');
+    var nextBtn = document.getElementById('wordNext');
+    var clearBtn = document.getElementById('wordClear');
+    var checkBtn = document.getElementById('wordCheck');
+    var resultEl = document.getElementById('wordResult');
+
+    function updateDisplay() {
+      var word = words[currentIndex];
+      romanEl.textContent = word.roman;
+      devanagariEl.textContent = word.devanagari;
+      meaningEl.textContent = word.meaning;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === words.length - 1;
+      
+      // Reset to hidden state for new word
+      isRevealed = false;
+      wordDisplay.classList.remove('revealed');
+      devanagariEl.classList.add('hidden');
+      hintEl.classList.remove('hidden');
+      hintEl.textContent = 'Write from memory!';
+      
+      clearCanvas();
+      resultEl.textContent = '';
+      resultEl.className = 'result-box';
+    }
+
+    function revealWord() {
+      isRevealed = true;
+      wordDisplay.classList.add('revealed');
+      devanagariEl.classList.remove('hidden');
+      hintEl.classList.add('hidden');
+    }
+
+    function clearCanvas() {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      strokes = [];
+      currentStroke = [];
+    }
+
+    function getPos(e) {
+      var rect = canvas.getBoundingClientRect();
+      var scaleX = canvas.width / rect.width;
+      var scaleY = canvas.height / rect.height;
+      if (e.touches && e.touches.length > 0) {
+        return {
+          x: (e.touches[0].clientX - rect.left) * scaleX,
+          y: (e.touches[0].clientY - rect.top) * scaleY
+        };
+      }
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function startDrawing(e) {
+      e.preventDefault();
+      isDrawing = true;
+      var pos = getPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+      currentStroke = [{ x: pos.x, y: pos.y }];
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      var pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      lastX = pos.x;
+      lastY = pos.y;
+      currentStroke.push({ x: pos.x, y: pos.y });
+    }
+
+    function stopDrawing() {
+      if (isDrawing && currentStroke.length > 0) {
+        strokes.push(currentStroke);
+      }
+      isDrawing = false;
+      currentStroke = [];
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+
+    prevBtn.addEventListener('click', function () {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateDisplay();
+      }
+    });
+
+    nextBtn.addEventListener('click', function () {
+      if (currentIndex < words.length - 1) {
+        currentIndex++;
+        updateDisplay();
+      }
+    });
+
+    clearBtn.addEventListener('click', function () {
+      clearCanvas();
+      resultEl.textContent = '';
+      resultEl.className = 'result-box';
+    });
+
+    checkBtn.addEventListener('click', function () {
+      var word = words[currentIndex];
+      var totalPoints = strokes.reduce(function (sum, s) { return sum + s.length; }, 0);
+      
+      if (totalPoints < 15) {
+        resultEl.textContent = 'Please write "' + word.roman + '" on the canvas.';
+        resultEl.className = 'result-box info';
+        return;
+      }
+
+      var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      var pixels = imageData.data;
+      var inkPixels = 0;
+      var minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+
+      for (var i = 0; i < pixels.length; i += 4) {
+        var r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+        if (r < 200 || g < 200 || b < 200) {
+          inkPixels++;
+          var px = (i / 4) % canvas.width;
+          var py = Math.floor((i / 4) / canvas.width);
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (py < minY) minY = py;
+          if (py > maxY) maxY = py;
+        }
+      }
+
+      var width = maxX - minX;
+      var height = maxY - minY;
+      var coverage = inkPixels / (canvas.width * canvas.height);
+      var hasEnoughStrokes = strokes.length >= 1;
+      var hasReasonableSize = width > 50 && height > 25;
+      var hasReasonableCoverage = coverage > 0.01 && coverage < 0.5;
+
+      if (isRevealed) {
+        // User is copying after seeing the word
+        if (hasEnoughStrokes && hasReasonableSize && hasReasonableCoverage) {
+          resultEl.innerHTML = '✓ Good job copying <span class="devanagari-part">' + word.devanagari + '</span>! Use arrows for next word.';
+          resultEl.className = 'result-box correct';
+        } else if (!hasReasonableSize) {
+          resultEl.textContent = 'Try writing it a bit larger. Look at the word above and copy it.';
+          resultEl.className = 'result-box info';
+        } else {
+          resultEl.innerHTML = 'Keep practicing! Try to match <span class="devanagari-part">' + word.devanagari + '</span> shown above.';
+          resultEl.className = 'result-box info';
+        }
+      } else {
+        // First attempt from memory - reveal and let them compare
+        revealWord();
+        if (hasEnoughStrokes && hasReasonableSize && hasReasonableCoverage) {
+          resultEl.innerHTML = 'Here\'s <span class="devanagari-part">' + word.devanagari + '</span> — compare your writing. Use arrows for next word.';
+          resultEl.className = 'result-box info';
+        } else if (!hasReasonableSize) {
+          resultEl.innerHTML = 'Here\'s <span class="devanagari-part">' + word.devanagari + '</span>. Try writing it a bit larger.';
+          resultEl.className = 'result-box info';
+        } else {
+          resultEl.innerHTML = 'Here\'s <span class="devanagari-part">' + word.devanagari + '</span>. Clear and try copying it!';
+          resultEl.className = 'result-box info';
+        }
+      }
+    });
+
+    updateDisplay();
+  })();
+})();
