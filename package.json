@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "dev:hindi": "node server/hindi-learning-server.cjs",
+    "sync:hindi-env": "node scripts/sync-hindi-env.cjs"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "openai": "^6.29.0"
+  }
+}

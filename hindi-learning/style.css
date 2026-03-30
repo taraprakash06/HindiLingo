@@ -321,38 +321,6 @@ body {
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
 }
 
-.api-settings {
-  margin-bottom: 16px;
-  padding: 12px 14px;
-  background: var(--bg);
-  color: var(--text);
-  border-radius: 10px;
-  border: 1px solid var(--surface2);
-}
-
-.api-settings-label {
-  font-size: 0.9rem;
-  color: var(--muted);
-  margin: 0 0 8px;
-}
-
-.api-settings-inner {
-  display: grid;
-  gap: 8px;
-  margin-top: 12px;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-}
-
-.api-settings-inner label { color: var(--muted); font-size: 0.9rem; }
-.api-settings-inner .select { min-width: 140px; }
-.api-settings-inner #apiKey { grid-column: 1 / -1; }
-.api-status { font-size: 0.85rem; color: var(--muted); }
-
-@media (max-width: 560px) {
-  .api-settings-inner { grid-template-columns: 1fr; }
-}
-
 .input-row {
   display: flex;
   gap: 10px;
@@ -503,10 +471,6 @@ body {
 .select:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
-}
-
-.api-settings.collapsed {
-  display: none;
 }
 
 .test-area {
@@ -904,6 +868,89 @@ body {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+}
+
+.conversation-container {
+  margin-top: 16px;
+}
+
+.conversation-log {
+  background: #fff;
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  padding: 12px 14px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conversation-message {
+  padding: 8px 10px;
+  border-radius: 10px;
+  max-width: 100%;
+}
+
+.conversation-message.user {
+  align-self: flex-end;
+  background: var(--accent-light);
+  color: var(--text);
+}
+
+.conversation-message.bot {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.conversation-message-translatable {
+  cursor: help;
+  border-bottom: 1px dotted var(--accent);
+}
+
+.conversation-message-translatable:hover {
+  background: rgba(245, 158, 11, 0.06);
+  border-radius: 10px;
+}
+
+.conversation-tooltip {
+  position: fixed;
+  z-index: 1000;
+  transform: translate(-50%, 0);
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: var(--text);
+  background: #fff;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  max-width: 220px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s, visibility 0.15s;
+}
+
+.conversation-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.conversation-tooltip-sentence {
+  max-width: 320px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  white-space: normal;
+  text-align: left;
+}
+
+.conversation-input {
+  margin-top: 10px;
+  resize: vertical;
 }
 
 .footer p {

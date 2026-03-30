@@ -1,2 +1,5 @@
 # Local config with API keys (never commit)
 diagram-generator/config.local.js
+hindi-learning/config.local.js
+# Ignore environment variables
+.env

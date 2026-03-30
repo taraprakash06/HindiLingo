@@ -1,3 +1,5 @@
+/* OpenAI: browser → POST /api/openai/chat on same origin (npm run dev:hindi). Key only in server .env. */
+
 (function () {
   'use strict';
 
@@ -68,153 +70,61 @@
 
   var phraseInput = $('phraseInput');
   var checkResult = $('checkResult');
-  var apiProvider = $('apiProvider');
-  var apiKeyInput = $('apiKey');
-  var apiStatus = $('apiStatus');
   var doCheckBtn = $('doCheck');
 
-  var STORAGE_KEY = 'hindi-learning-api';
-  var apiProviderScript = $('apiProviderScript');
-  var apiKeyScriptInput = $('apiKeyScript');
-  var apiStatusScript = $('apiStatusScript');
-  function syncApiKeyToScript() {
-    if (apiProviderScript) apiProviderScript.value = apiProvider.value;
-    if (apiKeyScriptInput) apiKeyScriptInput.value = apiKeyInput.value;
-  }
-  function syncApiKeyFromScript() {
-    if (apiProviderScript) apiProvider.value = apiProviderScript.value;
-    if (apiKeyScriptInput) apiKeyInput.value = apiKeyScriptInput.value;
-  }
-  function loadApiSettings() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        var s = JSON.parse(raw);
-        if (s.provider) { apiProvider.value = s.provider; if (apiProviderScript) apiProviderScript.value = s.provider; }
-        if (s.key) { apiKeyInput.value = s.key; if (apiKeyScriptInput) apiKeyScriptInput.value = s.key; }
-        apiStatus.textContent = 'Key saved (local only).';
-        if (apiStatusScript) apiStatusScript.textContent = 'Key saved (local only).';
-      }
-    } catch (e) {}
-  }
-  loadApiSettings();
-
-  $('saveApiKey').addEventListener('click', function () {
-    var key = apiKeyInput.value.trim();
-    var provider = apiProvider.value;
-    if (key) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider: provider, key: key }));
-        apiStatus.textContent = 'Saved. Stored in this browser only.';
-        syncApiKeyToScript();
-        if (apiStatusScript) apiStatusScript.textContent = 'Saved.';
-      } catch (e) {
-        apiStatus.textContent = 'Could not save.';
-      }
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-      apiStatus.textContent = 'Cleared.';
-      syncApiKeyToScript();
-      if (apiStatusScript) apiStatusScript.textContent = 'Cleared.';
+  function getHindiApiBase() {
+    if (typeof window !== 'undefined' && window.__HINDI_LEARNING_API_BASE__ != null) {
+      var b = String(window.__HINDI_LEARNING_API_BASE__).trim();
+      if (b) return b.replace(/\/$/, '');
     }
-  });
-
-  if ($('saveApiKeyScript')) {
-    $('saveApiKeyScript').addEventListener('click', function () {
-      var key = apiKeyScriptInput ? apiKeyScriptInput.value.trim() : '';
-      var provider = apiProviderScript ? apiProviderScript.value : '';
-      if (key) {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ provider: provider, key: key }));
-          syncApiKeyFromScript();
-          if (apiStatusScript) apiStatusScript.textContent = 'Saved. Stored in this browser only.';
-          if (apiStatus) apiStatus.textContent = 'Saved.';
-        } catch (e) {
-          if (apiStatusScript) apiStatusScript.textContent = 'Could not save.';
-        }
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-        syncApiKeyFromScript();
-        if (apiStatusScript) apiStatusScript.textContent = 'Cleared.';
-        if (apiStatus) apiStatus.textContent = 'Cleared.';
-      }
-    });
+    return '';
   }
 
-  var TRANSLATION_STORAGE_KEY = 'hindi-learning-translation';
-  var translationProviderSelect = $('translationProvider');
-  var translationApiKeyInput = $('translationApiKey');
-  var translationApiStatus = $('translationApiStatus');
-  function loadTranslationSettings() {
-    try {
-      var raw = localStorage.getItem(TRANSLATION_STORAGE_KEY);
-      if (raw) {
-        var s = JSON.parse(raw);
-        if (s.provider) translationProviderSelect.value = s.provider;
-        if (s.key) translationApiKeyInput.value = s.key;
-        translationApiStatus.textContent = 'Saved.';
-      }
-    } catch (e) {}
+  function openaiChatViaProxy(payload, cb) {
+    var url = getHindiApiBase() + '/api/openai/chat';
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var data;
+          try {
+            data = text ? JSON.parse(text) : {};
+          } catch (e) {
+            return cb('Invalid JSON from server');
+          }
+          if (!r.ok) {
+            var msg =
+              (data.error && (typeof data.error === 'string' ? data.error : data.error.message)) ||
+              data.message ||
+              text ||
+              'HTTP ' + r.status;
+            return cb(typeof msg === 'string' ? msg : JSON.stringify(msg));
+          }
+          if (data.error) {
+            return cb(
+              typeof data.error === 'string'
+                ? data.error
+                : data.error.message || JSON.stringify(data.error)
+            );
+          }
+          cb(null, data);
+        });
+      })
+      .catch(function (e) {
+        cb(e.message || 'Network error');
+      });
   }
-  loadTranslationSettings();
-  $('saveTranslationKey').addEventListener('click', function () {
-    var key = translationApiKeyInput.value.trim();
-    var provider = translationProviderSelect.value;
-    if (key && provider) {
-      try {
-        localStorage.setItem(TRANSLATION_STORAGE_KEY, JSON.stringify({ provider: provider, key: key }));
-        translationApiStatus.textContent = 'Saved.';
-      } catch (e) {
-        translationApiStatus.textContent = 'Could not save.';
-      }
-    } else {
-      localStorage.removeItem(TRANSLATION_STORAGE_KEY);
-      translationApiStatus.textContent = provider ? 'Enter key.' : 'Cleared.';
-    }
-  });
 
   function getApiConfig() {
-    var key = apiKeyInput && apiKeyInput.value.trim();
-    var provider = apiProvider && apiProvider.value;
-    if (!key && apiKeyScriptInput) {
-      key = apiKeyScriptInput.value.trim();
-      provider = apiProviderScript && apiProviderScript.value;
-    }
-    if (!key) return null;
-    return { provider: provider || 'openai', key: key };
+    return { provider: 'openai' };
   }
 
   function getTranslationConfig() {
-    var key = translationApiKeyInput.value.trim();
-    var provider = translationProviderSelect.value;
-    if (!key || !provider) return null;
-    return { provider: provider, key: key };
+    return null;
   }
-
-  (function initApiToggles() {
-    var scriptToggle = $('toggleApiSettingsScript');
-    var scriptSettings = $('apiSettingsScript');
-    if (scriptToggle && scriptSettings) {
-      scriptToggle.addEventListener('click', function () {
-        var isCollapsed = scriptSettings.classList.toggle('collapsed');
-        scriptToggle.textContent = isCollapsed ? 'Show API settings' : 'Hide API settings';
-      });
-      scriptToggle.textContent = 'Show API settings';
-    }
-
-    var mainToggle = $('toggleApiSettings');
-    var mainSettings = $('apiSettings');
-    var translationSettings = $('translationSettings');
-    if (mainToggle && mainSettings && translationSettings) {
-      mainToggle.addEventListener('click', function () {
-        var collapsed = !mainSettings.classList.contains('collapsed');
-        mainSettings.classList.toggle('collapsed', collapsed);
-        translationSettings.classList.toggle('collapsed', collapsed);
-        mainToggle.textContent = collapsed ? 'Show API settings' : 'Hide API settings';
-      });
-      mainToggle.textContent = 'Show API settings';
-    }
-  })();
 
   function looksLikeEnglish(text) {
     if (!text || /[\u0900-\u097F]/.test(text)) return false;
@@ -269,184 +179,77 @@
   }
 
   function romanToDevanagariWithLlm(config, roman, cb) {
+    void config;
     var systemMsg = 'You convert romanized Hindi (Latin) to Devanagari only. Output ONLY the Devanagari characters, no other text. Use correct Hindi spelling: e.g. "tara" (name/star) = तारा, not तर. Single word or phrase only.';
     var userMsg = 'Convert to Devanagari (output only the Devanagari, nothing else): ' + roman;
-    if (config.provider === 'openai') {
-      fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: systemMsg },
-            { role: 'user', content: userMsg }
-          ],
-          temperature: 0
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(data.error.message);
-          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-          var devanagari = extractDevanagariFromResponse(text);
-          cb(null, devanagari || text.trim());
-        })
-        .catch(function (e) { cb(e.message); });
-    } else if (config.provider === 'anthropic') {
-      fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': config.key, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 256,
-          system: systemMsg,
-          messages: [{ role: 'user', content: userMsg }]
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(data.error.message);
-          var text = (data.content && data.content[0] && data.content[0].text) || '';
-          var devanagari = extractDevanagariFromResponse(text);
-          cb(null, devanagari || text.trim());
-        })
-        .catch(function (e) { cb(e.message); });
-    } else {
-      cb('Unknown provider');
-    }
+    openaiChatViaProxy(
+      {
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemMsg },
+          { role: 'user', content: userMsg },
+        ],
+        temperature: 0,
+      },
+      function (err, data) {
+        if (err) return cb(err);
+        var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        var devanagari = extractDevanagariFromResponse(text);
+        cb(null, devanagari || text.trim());
+      }
+    );
   }
 
   function devanagariToRomanWithLlm(config, devanagari, cb) {
+    void config;
     var prompt = 'Convert this Hindi phrase from Devanagari to Roman/Latin script only. Output ONLY the romanized text, nothing else. No explanation, no quotes. Phrase: ' + devanagari;
-    if (config.provider === 'openai') {
-      fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(data.error.message);
-          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-          cb(null, text.trim());
-        })
-        .catch(function (e) { cb(e.message); });
-    } else if (config.provider === 'anthropic') {
-      fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': config.key, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 256,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(data.error.message);
-          var text = (data.content && data.content[0] && data.content[0].text) || '';
-          cb(null, text.trim());
-        })
-        .catch(function (e) { cb(e.message); });
-    } else {
-      cb('Unknown provider');
-    }
+    openaiChatViaProxy(
+      { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0 },
+      function (err, data) {
+        if (err) return cb(err);
+        var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        cb(null, text.trim());
+      }
+    );
   }
 
   function translateEnglishToHindiRoman(config, english, cb) {
+    void config;
     var prompt = 'Translate the following English word or phrase to Hindi. Output ONLY the Hindi translation in roman (Latin) script, nothing else. No explanation, no quotes. Word or phrase: ' + english;
-    if (config.provider === 'openai') {
-      fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(data.error.message);
-          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-          cb(null, (text || '').trim());
-        })
-        .catch(function (e) { cb(e.message); });
-    } else if (config.provider === 'anthropic') {
-      fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': config.key, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 256,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(data.error.message);
-          var text = (data.content && data.content[0] && data.content[0].text) || '';
-          cb(null, (text || '').trim());
-        })
-        .catch(function (e) { cb(e.message); });
-    } else {
-      cb('Unknown provider');
-    }
+    openaiChatViaProxy(
+      { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0 },
+      function (err, data) {
+        if (err) return cb(err);
+        var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        cb(null, (text || '').trim());
+      }
+    );
   }
 
   var ROMAN_ONLY_INSTRUCTION = 'CRITICAL: In your "feedback" text you must write every Hindi phrase using ONLY Roman/Latin letters (a-z). Do NOT use Devanagari script at all (no characters like म न ग ि ट र etc). Example: write "main guitar bajata hoon" or "main guitar bajati hoon" — never the Devanagari form.';
 
   function checkPhraseWithApi(config, phrase, cb) {
+    void config;
     var prompt = ROMAN_ONLY_INSTRUCTION + '\n\nYou are a Hindi language tutor. The user wrote: ' + JSON.stringify(phrase) + '\n\nTranslate it: if it is in English, give the Hindi translation; if it is in Hindi (any script), give the English translation. Reply with ONLY a JSON object, no markdown, with keys "correct" (boolean, always true if you provide a translation) and "feedback" (string). Put the translation and a brief explanation in "feedback". Write any Hindi in ROMAN letters only. Do not add a sentence in Hindi that means "that is how you say [phrase] in Hindi"; only give the translation and a brief English explanation. Never use Devanagari in the feedback.';
-    if (config.provider === 'openai') {
-      fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + config.key },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            { role: 'system', content: 'When you output Hindi phrases, you must write them only in Roman/Latin script (e.g. main guitar bajata hoon). Never use Devanagari characters (no ॐ-ॿ).' },
-            { role: 'user', content: prompt }
-          ],
-          temperature: 0.2
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(null, data.error.message || 'API error');
-          var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
-          parseFeedback(text, cb);
-        })
-        .catch(function (e) { cb(null, e.message || 'Network error'); });
-    } else if (config.provider === 'anthropic') {
-      fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': config.key,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 512,
-          system: 'When you output Hindi phrases, write them only in Roman/Latin script (e.g. main guitar bajata hoon). Never use Devanagari characters.',
-          messages: [{ role: 'user', content: prompt }]
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.error) return cb(null, data.error.message || 'API error');
-          var text = (data.content && data.content[0] && data.content[0].text) || '';
-          parseFeedback(text, cb);
-        })
-        .catch(function (e) { cb(null, e.message || 'Network error'); });
-    } else {
-      cb(null, 'Unknown provider');
-    }
+    openaiChatViaProxy(
+      {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'When you output Hindi phrases, you must write them only in Roman/Latin script (e.g. main guitar bajata hoon). Never use Devanagari characters (no ॐ-ॿ).',
+          },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.2,
+      },
+      function (err, data) {
+        if (err) return cb(null, err);
+        var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        parseFeedback(text, cb);
+      }
+    );
   }
 
   function stripDevanagariFromFeedback(str) {
@@ -498,7 +301,7 @@
         return;
       }
     }
-    checkResult.innerHTML = 'Translation: <span class="devanagari-part">' + escapeHtml(devanagari) + '</span>. Add an API key above for English ↔ Hindi translation.';
+    checkResult.innerHTML = 'Translation: <span class="devanagari-part">' + escapeHtml(devanagari) + '</span>. Run <code>npm run dev:hindi</code> (with <code>OPENAI_API_KEY</code> in project <code>.env</code>) for full AI translation.';
     checkResult.className = 'result-box info';
   }
 
@@ -510,10 +313,6 @@
       return;
     }
     var config = getApiConfig();
-    if (!config) {
-      showListResult();
-      return;
-    }
     var isEnglishInput = looksLikeEnglish(raw);
     doCheckBtn.disabled = true;
     checkResult.textContent = 'Translating…';
@@ -583,12 +382,12 @@
     var BOOK_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 55'%3E%3Crect x='10' y='8' width='50' height='40' rx='2' fill='%23dc2626'/%3E%3Crect x='12' y='10' width='46' height='36' rx='1' fill='%23ef4444'/%3E%3Crect x='35' y='8' width='3' height='40' fill='%23b91c1c'/%3E%3Crect x='16' y='14' width='16' height='2' fill='%23fef2f2'/%3E%3Crect x='16' y='19' width='14' height='1.5' fill='%23fecaca'/%3E%3Crect x='16' y='23' width='15' height='1.5' fill='%23fecaca'/%3E%3Crect x='16' y='27' width='12' height='1.5' fill='%23fecaca'/%3E%3Crect x='41' y='14' width='14' height='2' fill='%23fef2f2'/%3E%3Crect x='41' y='19' width='12' height='1.5' fill='%23fecaca'/%3E%3Crect x='41' y='23' width='13' height='1.5' fill='%23fecaca'/%3E%3Crect x='41' y='27' width='10' height='1.5' fill='%23fecaca'/%3E%3Cpath d='M10 12 L10 8 Q10 6 12 6 L33 6 Q35 6 35 8 L35 12' fill='none' stroke='%23b91c1c' stroke-width='1'/%3E%3Cpath d='M60 12 L60 8 Q60 6 58 6 L37 6 Q35 6 35 8 L35 12' fill='none' stroke='%23b91c1c' stroke-width='1'/%3E%3C/svg%3E";
     var exercises = [
       { title: 'Preposition: par (on)', hint: 'Drag the bird onto the branch.', prep: 'par', subjectRe: /\b(chiriya|chidiya)\b/, objectRe: /\b(perh|daal|dal)\b/, example: 'chiriya perh par hai', exampleDev: '\u091A\u093F\u0921\u093C\u093F\u092F\u093E \u092A\u0947\u0921\u093C \u092A\u0930 \u0939\u0948', bgImg: BRANCH_SVG, dragImg: BIRD_SVG, dropLabel: '↓ drop bird here' },
-      { title: 'Preposition: mein (in)', hint: 'Drag the lion into the grass.', prep: 'mein', subjectRe: /\b(sher|lion)\b/, objectRe: /\b(ghaas|ghas|grass)\b/, example: 'sher ghaas mein hai', exampleDev: '\u0936\u0947\u0930 \u0918\u093E\u0938 \u092E\u0947\u0928 \u0939\u0948', bgImg: GRASS_SVG, dragImg: LION_SVG, dropLabel: '↓ drop lion here' },
+      { title: 'Preposition: mein (in)', hint: 'Drag the lion into the grass.', prep: 'mein', subjectRe: /\b(sher|lion)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'sher ghaas mein hai', exampleDev: '\u0936\u0947\u0930 \u0918\u093E\u0938 \u092E\u0947\u0928 \u0939\u0948', bgImg: GRASS_SVG, dragImg: LION_SVG, dropLabel: '↓ drop lion here' },
       { title: 'Preposition: mein (in)', hint: 'Drag the cloud into the sky.', prep: 'mein', subjectRe: /\b(badal|cloud)\b/, objectRe: /\b(aasman|akash|sky)\b/, example: 'badal aasman mein hai', exampleDev: '\u092C\u093E\u0926\u0932 \u0906\u0938\u092E\u093E\u0928 \u092E\u0947\u0928 \u0939\u0948', bgImg: SKY_PLAIN_SVG, dragImg: CLOUD_SVG, dropLabel: '↓ drop cloud here' },
       { title: 'Preposition: par (on)', hint: 'Drag the snake onto the road.', prep: 'par', subjectRe: /\b(saanp|sarp|snake)\b/, objectRe: /\b(sadak|road)\b/, example: 'saanp sadak par hai', exampleDev: '\u0938\u093E\u0902\u092A \u0938\u0921\u093C\u0915 \u092A\u0930 \u0939\u0948', bgImg: ROAD_SVG, dragImg: SNAKE_SVG, dropLabel: '↓ drop snake here' },
-      { title: 'Preposition: par (on)', hint: 'Drag the leaves onto the grass.', prep: 'par', subjectRe: /\b(patte|leaves|patta)\b/, objectRe: /\b(ghaas|ghas|grass)\b/, example: 'patte ghaas par hain', exampleDev: '\u092A\u0924\u094D\u0924\u0947 \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948\u0902', bgImg: GRASS_SVG, dragImg: LEAVES_SVG, dropLabel: '↓ drop leaves here' },
+      { title: 'Preposition: par (on)', hint: 'Drag the leaves onto the grass.', prep: 'par', subjectRe: /\b(patte|leaves|patta)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'patte ghaas par hain', exampleDev: '\u092A\u0924\u094D\u0924\u0947 \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948\u0902', bgImg: GRASS_SVG, dragImg: LEAVES_SVG, dropLabel: '↓ drop leaves here' },
       { title: 'Preposition: mein (in)', hint: 'Drag the sun into the sky.', prep: 'mein', subjectRe: /\b(suraj|sun)\b/, objectRe: /\b(aasman|akash|sky)\b/, example: 'suraj aasman mein hai', exampleDev: '\u0938\u0942\u0930\u091C \u0906\u0938\u092E\u093E\u0928 \u092E\u0947\u0928 \u0939\u0948', bgImg: SKY_PLAIN_SVG, dragImg: SUN_SVG, dropLabel: '↓ drop sun here' },
-      { title: 'Preposition: par (on)', hint: 'Drag the book onto the grass.', prep: 'par', subjectRe: /\b(kitaab|kitab|book|pustak)\b/, objectRe: /\b(ghaas|ghas|grass)\b/, example: 'kitaab ghaas par hai', exampleDev: '\u0915\u093F\u0924\u093E\u092C \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948', bgImg: GRASS_SVG, dragImg: BOOK_SVG, dropLabel: '↓ drop book here' }
+      { title: 'Preposition: par (on)', hint: 'Drag the book onto the grass.', prep: 'par', subjectRe: /\b(kitaab|kitab|book|pustak)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'kitaab ghaas par hai', exampleDev: '\u0915\u093F\u0924\u093E\u092C \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948', bgImg: GRASS_SVG, dragImg: BOOK_SVG, dropLabel: '↓ drop book here' }
     ];
     var currentPrepositionIndex = 0;
     function renderPrepositionExercise() {
@@ -1140,40 +939,34 @@
         return;
       }
 
-      if (apiConfig) {
-        var idx = 0;
-        buildCustomBtn.disabled = true;
-        customResult.textContent = 'Translating…';
-        customResult.className = 'result-box info';
+      var idx = 0;
+      buildCustomBtn.disabled = true;
+      customResult.textContent = 'Translating…';
+      customResult.className = 'result-box info';
 
-        function nextLlm() {
-          if (idx >= lines.length) {
+      function nextLlm() {
+        if (idx >= lines.length) {
+          buildCustomBtn.disabled = false;
+          customResult.textContent = '';
+          checkCustomBtn.disabled = false;
+          return;
+        }
+        var english = lines[idx];
+        customResult.textContent = 'Translating… ' + (idx + 1) + '/' + lines.length;
+        translateEnglishToHindiRoman(apiConfig, english, function (err, roman) {
+          if (err) {
+            customResult.textContent = 'Error: ' + err + (idx > 0 ? ' (added ' + idx + ' so far)' : '');
+            customResult.className = 'result-box incorrect';
             buildCustomBtn.disabled = false;
-            customResult.textContent = '';
-            checkCustomBtn.disabled = false;
+            checkCustomBtn.disabled = !customList.querySelector('.vocab-input');
             return;
           }
-          var english = lines[idx];
-          customResult.textContent = 'Translating… ' + (idx + 1) + '/' + lines.length;
-          translateEnglishToHindiRoman(apiConfig, english, function (err, roman) {
-            if (err) {
-              customResult.textContent = 'Error: ' + err + (idx > 0 ? ' (added ' + idx + ' so far)' : '');
-              customResult.className = 'result-box incorrect';
-              buildCustomBtn.disabled = false;
-              checkCustomBtn.disabled = !customList.querySelector('.vocab-input');
-              return;
-            }
-            if (roman) addCustomRow(english, roman);
-            idx++;
-            nextLlm();
-          });
-        }
-        nextLlm();
-        return;
+          if (roman) addCustomRow(english, roman);
+          idx++;
+          nextLlm();
+        });
       }
-
-      customResult.textContent = 'Add an API key (Translate or Script tab) to use custom vocab.';
-      customResult.className = 'result-box info';
+      nextLlm();
     });
   })();
   bindVocabCheck('vocabCustomList', 'checkCustomVocab', 'vocabCustomResult');
@@ -1642,5 +1435,157 @@
     });
 
     updateDisplay();
+  })();
+
+  // Conversation Section
+  var CONVERSATION_SIMPLE_PROMPT = 'You are a friendly Hindi tutor chatting with a learner. Use very simple words and short, clear sentences only. Use only basic, common Hindi vocabulary that beginners know—avoid difficult or formal words. The learner may write in Hindi (roman or Devanagari) or English. Always reply in simple Hindi using ROMAN/Latin letters only (no Devanagari script). Keep replies to 1–2 short sentences. Continue the conversation naturally.';
+
+  function translateSentenceToEnglish(config, sentence, cb) {
+    void config;
+    var text = (sentence || '').trim();
+    if (!text) return cb(null, '');
+    var prompt = 'Translate this Hindi sentence to English. Reply with ONLY the English translation, nothing else. Hindi: ' + text;
+    openaiChatViaProxy(
+      { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0 },
+      function (err, data) {
+        if (err) return cb(err);
+        var t = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        cb(null, (t || '').trim());
+      }
+    );
+  }
+
+  function translateWordToEnglish(config, word, cb) {
+    void config;
+    var clean = (word || '').trim().toLowerCase().replace(/[.,?!;:]+$/, '');
+    if (!clean) return cb(null, '');
+    var prompt = 'Give only the English meaning of this Hindi word. Reply with just the English word or short phrase, nothing else. Hindi word: ' + clean;
+    openaiChatViaProxy(
+      { model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0, max_tokens: 64 },
+      function (err, data) {
+        if (err) return cb(err);
+        var t = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        cb(null, (t || '').trim());
+      }
+    );
+  }
+
+  function chatWithTutor(config, history, cb) {
+    void config;
+    var systemMsg = CONVERSATION_SIMPLE_PROMPT;
+    var messages = [{ role: 'system', content: systemMsg }].concat(history);
+    openaiChatViaProxy(
+      { model: 'gpt-4o-mini', messages: messages, temperature: 0.7 },
+      function (err, data) {
+        if (err) return cb(err);
+        var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+        cb(null, (text || '').trim());
+      }
+    );
+  }
+
+  (function initConversation() {
+    var logEl = document.getElementById('conversationLog');
+    var inputEl = document.getElementById('conversationInput');
+    if (!logEl || !inputEl) return;
+
+    var history = [];
+    var sentenceTranslationCache = {};
+
+    var tooltipEl = document.createElement('div');
+    tooltipEl.className = 'conversation-tooltip conversation-tooltip-sentence';
+    tooltipEl.setAttribute('role', 'tooltip');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(tooltipEl);
+
+    function renderBotMessage(text) {
+      var div = document.createElement('div');
+      div.className = 'conversation-message bot conversation-message-translatable';
+      div.textContent = text || '';
+      return div;
+    }
+
+    function addMessage(role, text) {
+      if (role === 'bot') {
+        logEl.appendChild(renderBotMessage(text));
+      } else {
+        var div = document.createElement('div');
+        div.className = 'conversation-message ' + role;
+        div.textContent = text;
+        logEl.appendChild(div);
+      }
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function showTooltip(content, x, y) {
+      tooltipEl.textContent = content || '…';
+      tooltipEl.setAttribute('aria-hidden', 'false');
+      tooltipEl.style.left = x + 'px';
+      tooltipEl.style.top = (y - 8) + 'px';
+      tooltipEl.style.transform = 'translate(-50%, -100%)';
+      tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+      tooltipEl.classList.remove('visible');
+      tooltipEl.setAttribute('aria-hidden', 'true');
+    }
+
+    logEl.addEventListener('mouseover', function (e) {
+      var msg = e.target.closest('.conversation-message-translatable');
+      if (!msg) { hideTooltip(); return; }
+      var sentence = (msg.textContent || '').trim();
+      if (!sentence) return;
+      var rect = msg.getBoundingClientRect();
+      if (sentenceTranslationCache[sentence]) {
+        showTooltip(sentenceTranslationCache[sentence], rect.left + rect.width / 2, rect.top);
+        return;
+      }
+      showTooltip('Translating…', rect.left + rect.width / 2, rect.top);
+      translateSentenceToEnglish(getApiConfig(), sentence, function (err, translation) {
+        if (err) {
+          tooltipEl.textContent = 'Error: ' + err;
+          return;
+        }
+        sentenceTranslationCache[sentence] = translation;
+        if (tooltipEl.classList.contains('visible')) {
+          tooltipEl.textContent = translation;
+        }
+      });
+    });
+
+    logEl.addEventListener('mouseout', function (e) {
+      var msg = e.target.closest('.conversation-message-translatable');
+      if (!msg) return;
+      if (e.relatedTarget && (e.relatedTarget === tooltipEl || tooltipEl.contains(e.relatedTarget))) return;
+      hideTooltip();
+    });
+
+    tooltipEl.addEventListener('mouseenter', function () { tooltipEl.classList.add('visible'); });
+    tooltipEl.addEventListener('mouseleave', hideTooltip);
+
+    function sendMessage() {
+      var text = inputEl.value.trim();
+      if (!text) return;
+      addMessage('user', text);
+      history.push({ role: 'user', content: text });
+      inputEl.value = '';
+
+      chatWithTutor(getApiConfig(), history, function (err, reply) {
+        if (err) {
+          addMessage('bot', 'API error: ' + err);
+          return;
+        }
+        history.push({ role: 'assistant', content: reply });
+        addMessage('bot', reply);
+      });
+    }
+
+    inputEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
   })();
 })();

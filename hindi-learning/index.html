@@ -39,6 +39,7 @@
         <button type="button" class="tab" data-tab="check">🌐 Translate</button>
         <button type="button" class="tab" data-tab="test">📝 Sentences</button>
         <button type="button" class="tab" data-tab="pronunciation">🎤 Out loud</button>
+        <button type="button" class="tab" data-tab="conversation">💬 Conversation</button>
         <button type="button" class="tab" data-tab="vocab">📚 Vocab</button>
         <button type="button" class="tab" data-tab="prepositions">📍 Prepositions</button>
       </nav>
@@ -48,21 +49,6 @@
       <section id="transliterate" class="panel active">
         <h2>Roman → Devanagari</h2>
         <p class="hint">Type in romanized Hindi (e.g. namaste, hindi, aap kaise hain) and see it in Hindi script.</p>
-        <button type="button" id="toggleApiSettingsScript" class="btn secondary" style="margin-bottom:8px">API settings</button>
-        <div class="api-settings collapsed" id="apiSettingsScript">
-          <p class="api-settings-label">API key (optional — used for Translate too; OpenAI or Claude)</p>
-          <div class="api-settings-inner">
-            <label for="apiProviderScript">Provider</label>
-            <select id="apiProviderScript" class="select">
-              <option value="openai">OpenAI (GPT)</option>
-              <option value="anthropic">Anthropic (Claude)</option>
-            </select>
-            <label for="apiKeyScript">API key</label>
-            <input type="password" id="apiKeyScript" class="text-input" placeholder="Paste key here (stored in this browser only)" autocomplete="off" />
-            <button type="button" id="saveApiKeyScript" class="btn secondary">Save</button>
-            <span class="api-status" id="apiStatusScript"></span>
-          </div>
-        </div>
         <div class="input-row">
           <input type="text" id="romanInput" class="text-input" placeholder="e.g. namaste" autocomplete="off" />
           <button type="button" id="doTransliterate" class="btn primary">Show in Hindi</button>
@@ -118,36 +104,6 @@
       <section id="check" class="panel">
         <h2>Translate</h2>
         <p class="hint">Enter a phrase (Hindi or English) to get a translation.</p>
-        <button type="button" id="toggleApiSettings" class="btn secondary" style="margin-bottom:8px">API settings</button>
-        <div class="api-settings collapsed" id="apiSettings">
-          <p class="api-settings-label">API key (optional — check any phrase with OpenAI or Claude)</p>
-          <div class="api-settings-inner">
-            <label for="apiProvider">Provider</label>
-            <select id="apiProvider" class="select">
-              <option value="openai">OpenAI (GPT)</option>
-              <option value="anthropic">Anthropic (Claude)</option>
-            </select>
-            <label for="apiKey">API key</label>
-            <input type="password" id="apiKey" class="text-input" placeholder="Paste key here (stored in this browser only)" autocomplete="off" />
-            <button type="button" id="saveApiKey" class="btn secondary">Save</button>
-            <span class="api-status" id="apiStatus"></span>
-          </div>
-        </div>
-        <div class="api-settings translation-source collapsed" id="translationSettings">
-          <p class="api-settings-label">English → Hindi translation (optional — use Google Translate or DeepL for accuracy)</p>
-          <div class="api-settings-inner">
-            <label for="translationProvider">Source</label>
-            <select id="translationProvider" class="select">
-              <option value="">None (use AI only)</option>
-              <option value="google">Google Translate</option>
-              <option value="deepl">DeepL</option>
-            </select>
-            <label for="translationApiKey">API key</label>
-            <input type="password" id="translationApiKey" class="text-input" placeholder="Key for chosen source (stored in this browser only)" autocomplete="off" />
-            <button type="button" id="saveTranslationKey" class="btn secondary">Save</button>
-            <span class="api-status" id="translationApiStatus"></span>
-          </div>
-        </div>
         <div class="input-row">
           <textarea id="phraseInput" class="text-input phrase-input" placeholder="Type your Hindi phrase here..." rows="3"></textarea>
           <button type="button" id="doCheck" class="btn primary">Check</button>
@@ -194,6 +150,21 @@
         </div>
         <div class="output-box" id="pronunciationHeard" aria-live="polite"></div>
         <div class="result-box" id="pronunciationResult" aria-live="polite"></div>
+      </section>
+
+      <section id="conversation" class="panel">
+        <h2>Conversation</h2>
+        <p class="hint">Chat with a Hindi tutor bot. You can write in Hindi (roman or script) and the bot will reply in simple Hindi (roman letters).</p>
+        <div class="conversation-container">
+          <div class="conversation-log" id="conversationLog" aria-live="polite"></div>
+          <input
+            type="text"
+            id="conversationInput"
+            class="text-input conversation-input"
+            placeholder="Type a message in Hindi and press Enter…"
+            autocomplete="off"
+          />
+        </div>
       </section>
 
       <section id="vocab" class="panel">
@@ -376,6 +347,7 @@
     </footer>
   </div>
 
+  <!-- Same-origin: npm run dev:hindi. Split hosting: set window.__HINDI_LEARNING_API_BASE__ before app.js (see config.local.example.js). -->
   <script src="transliterate.js"></script>
   <script src="app.js"></script>
 </body>
