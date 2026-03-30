@@ -7,7 +7,7 @@ var path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-var PORT = parseInt(process.env.HINDI_LEARNING_PORT || '3847', 10);
+var PORT = parseInt(process.env.PORT || process.env.HINDI_LEARNING_PORT || '3847', 10);
 var STATIC_ROOT = path.resolve(__dirname, '..', 'hindi-learning');
 var OPENAI_KEY = process.env.OPENAI_API_KEY || '';
 
