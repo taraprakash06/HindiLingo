@@ -11,6 +11,86 @@ var PORT = parseInt(process.env.PORT || process.env.HINDI_LEARNING_PORT || '3847
 var STATIC_ROOT = path.resolve(__dirname, '..', 'hindi-learning');
 var OPENAI_KEY = process.env.OPENAI_API_KEY || '';
 
+// --- Minimal protections (public link safe-ish defaults) ---
+var LIMITS = {
+  bodyBytes: 256 * 1024,
+  messagesMax: 30,
+  messageCharsMax: 4000,
+  totalCharsMax: 20000,
+  ipPerMinute: 20,
+  globalPerMinute: 200,
+};
+
+var ALLOWED_OPENAI_MODELS = { 'gpt-4o-mini': true };
+
+function getClientIp(req) {
+  // On Render we are behind a proxy; x-forwarded-for is a comma-separated list.
+  var xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff.trim()) return xff.split(',')[0].trim();
+  var ra = req.socket && req.socket.remoteAddress;
+  return ra ? String(ra) : 'unknown';
+}
+
+function isString(x) {
+  return typeof x === 'string' || x instanceof String;
+}
+
+function validateChatPayload(body) {
+  if (!body || typeof body !== 'object') return 'Invalid JSON body';
+  if (!Array.isArray(body.messages)) return 'Missing messages array';
+  if (body.messages.length < 1) return 'messages must be non-empty';
+  if (body.messages.length > LIMITS.messagesMax) return 'Too many messages (max ' + LIMITS.messagesMax + ')';
+
+  var totalChars = 0;
+  for (var i = 0; i < body.messages.length; i++) {
+    var m = body.messages[i];
+    if (!m || typeof m !== 'object') return 'Invalid message at index ' + i;
+    if (!isString(m.role) || !m.role) return 'Invalid role at index ' + i;
+    var c = m.content;
+    if (!isString(c)) return 'Invalid content at index ' + i;
+    var s = String(c);
+    if (s.length > LIMITS.messageCharsMax) return 'Message too long (max ' + LIMITS.messageCharsMax + ' chars)';
+    totalChars += s.length;
+    if (totalChars > LIMITS.totalCharsMax) return 'Conversation too long (max ' + LIMITS.totalCharsMax + ' chars)';
+  }
+
+  if (body.model != null && !isString(body.model)) return 'Invalid model';
+  var model = (isString(body.model) && String(body.model).trim()) || 'gpt-4o-mini';
+  if (!ALLOWED_OPENAI_MODELS[model]) return 'Model not allowed';
+
+  if (body.temperature != null && typeof body.temperature !== 'number') return 'Invalid temperature';
+  if (body.max_tokens != null && typeof body.max_tokens !== 'number') return 'Invalid max_tokens';
+
+  return null;
+}
+
+function makeFixedWindowLimiter(maxPerWindow, windowMs) {
+  var buckets = new Map();
+  return function (key) {
+    var now = Date.now();
+    var b = buckets.get(key);
+    if (!b || now >= b.resetAt) {
+      b = { count: 0, resetAt: now + windowMs };
+      buckets.set(key, b);
+    }
+    b.count++;
+    if (b.count > maxPerWindow) {
+      var retryAfterSec = Math.max(1, Math.ceil((b.resetAt - now) / 1000));
+      return { ok: false, retryAfterSec: retryAfterSec };
+    }
+    // Opportunistic cleanup to prevent unbounded growth
+    if (buckets.size > 5000) {
+      buckets.forEach(function (val, k) {
+        if (now >= val.resetAt) buckets.delete(k);
+      });
+    }
+    return { ok: true };
+  };
+}
+
+var allowIp = makeFixedWindowLimiter(LIMITS.ipPerMinute, 60 * 1000);
+var allowGlobal = makeFixedWindowLimiter(LIMITS.globalPerMinute, 60 * 1000);
+
 var MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -33,7 +113,7 @@ function sendJson(res, status, obj) {
 }
 
 function readBody(req, limit) {
-  limit = limit || 512 * 1024;
+  limit = limit || LIMITS.bodyBytes;
   return new Promise(function (resolve, reject) {
     var chunks = [];
     var len = 0;
@@ -121,6 +201,26 @@ var server = http.createServer(function (req, res) {
   }
 
   if (pathname === '/api/openai/chat' && req.method === 'POST') {
+    var ip = getClientIp(req);
+    var ipLimit = allowIp(ip);
+    if (!ipLimit.ok) {
+      res.writeHead(429, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Retry-After': String(ipLimit.retryAfterSec),
+      });
+      res.end(JSON.stringify({ error: 'Rate limit exceeded (per IP). Try again soon.' }));
+      return;
+    }
+    var globalLimit = allowGlobal('global');
+    if (!globalLimit.ok) {
+      res.writeHead(429, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Retry-After': String(globalLimit.retryAfterSec),
+      });
+      res.end(JSON.stringify({ error: 'Rate limit exceeded (global). Try again soon.' }));
+      return;
+    }
+
     readBody(req)
       .then(function (raw) {
         var body;
@@ -130,15 +230,15 @@ var server = http.createServer(function (req, res) {
           sendJson(res, 400, { error: 'Invalid JSON' });
           return;
         }
-        if (!body.messages || !Array.isArray(body.messages)) {
-          sendJson(res, 400, { error: 'Missing messages array' });
+        var validationError = validateChatPayload(body);
+        if (validationError) {
+          sendJson(res, 400, { error: validationError });
           return;
         }
-        if (!body.model || typeof body.model !== 'string') {
-          body.model = 'gpt-4o-mini';
-        }
+
+        var model = (typeof body.model === 'string' && body.model.trim()) || 'gpt-4o-mini';
         var payload = {
-          model: body.model,
+          model: model,
           messages: body.messages,
           temperature: typeof body.temperature === 'number' ? body.temperature : 0,
         };
