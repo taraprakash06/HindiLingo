@@ -441,6 +441,26 @@
     function normalizePreposition(s) {
       return (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
     }
+    function levenshtein(a, b) {
+      a = (a || '').toLowerCase();
+      b = (b || '').toLowerCase();
+      if (a === b) return 0;
+      if (!a) return b.length;
+      if (!b) return a.length;
+      var prev = new Array(b.length + 1);
+      var curr = new Array(b.length + 1);
+      for (var j = 0; j <= b.length; j++) prev[j] = j;
+      for (var i = 1; i <= a.length; i++) {
+        curr[0] = i;
+        var ca = a.charCodeAt(i - 1);
+        for (var k = 1; k <= b.length; k++) {
+          var cost = ca === b.charCodeAt(k - 1) ? 0 : 1;
+          curr[k] = Math.min(prev[k] + 1, curr[k - 1] + 1, prev[k - 1] + cost);
+        }
+        var tmp = prev; prev = curr; curr = tmp;
+      }
+      return prev[b.length];
+    }
     checkPrepositionBtn.addEventListener('click', function () {
       var raw = prepositionAnswer.value.trim();
       if (!raw) {
@@ -452,7 +472,7 @@
       var hasPar = /par/.test(norm) || /\u092A\u0930/.test(raw);
       var parSubjectRe = /\b(chiriya|chidiya)\b/;
       var parObjectRe = /\b(perh|daal|dal)\b/;
-      function wordOrderCorrect(n, subR, objR, prep) {
+      function parseWordOrder(n, subR, objR, prep) {
         var words = n.split(/\s+/);
         var si = -1, oi = -1, pi = -1;
         for (var w = 0; w < words.length; w++) {
@@ -461,7 +481,7 @@
           if (prep === 'par' && (words[w] === 'par' || /\u092A\u0930/.test(words[w]))) pi = w;
           if (prep === 'mein' && (words[w] === 'mein' || /\u092E\u0947\u0928/.test(words[w]))) pi = w;
         }
-        return pi > si && pi > oi && si >= 0 && oi >= 0 && pi >= 0;
+        return { words: words, si: si, oi: oi, pi: pi };
       }
       var ex = exercises[currentPrepositionIndex];
       var hasPrep = (ex.prep === 'par' && (/par/.test(norm) || /\u092A\u0930/.test(raw))) || (ex.prep === 'mein' && (/mein/.test(norm) || /\u092E\u0947\u0928/.test(raw)));
@@ -470,7 +490,57 @@
         prepositionResult.className = 'result-box incorrect';
         return;
       }
-      if (!wordOrderCorrect(norm, ex.subjectRe, ex.objectRe, ex.prep)) {
+      var order = parseWordOrder(norm, ex.subjectRe, ex.objectRe, ex.prep);
+      var subjectFound = order.si >= 0;
+      var objectFound = order.oi >= 0;
+      var prepFound = order.pi >= 0;
+      var prepAfterTwoWords = prepFound && order.pi >= 2;
+
+      // If the learner put the preposition in the right spot but misspelled the subject/noun,
+      // don't show a misleading "word order" error.
+      if ((!subjectFound || !objectFound) && prepAfterTwoWords) {
+        var expectedWords = (ex.example || '').trim().split(/\s+/);
+        var expectedSubject = expectedWords[0] || '';
+        var expectedObject = expectedWords[1] || '';
+
+        // Try to guess the intended word to give a nicer hint (closest word in input).
+        function closestWord(target) {
+          if (!target) return '';
+          var best = { w: '', d: 999 };
+          for (var i = 0; i < order.words.length; i++) {
+            var w = order.words[i];
+            if (w === ex.prep) continue;
+            var d = levenshtein(w, target);
+            if (d < best.d) best = { w: w, d: d };
+          }
+          return best;
+        }
+
+        var parts = [];
+        if (!subjectFound && expectedSubject) {
+          var s = closestWord(expectedSubject);
+          parts.push('Check the subject spelling' + (s.w ? ' ("' + s.w + '")' : '') + ': try "' + expectedSubject + '".');
+        }
+        if (!objectFound && expectedObject) {
+          var o = closestWord(expectedObject);
+          parts.push('Check the noun spelling' + (o.w ? ' ("' + o.w + '")' : '') + ': try "' + expectedObject + '".');
+        }
+        if (parts.length === 0) {
+          parts.push('Word order looks right — check spelling.');
+        }
+        prepositionResult.innerHTML =
+          parts.join(' ') +
+          ' Example: <span class="devanagari-part">' +
+          ex.exampleDev +
+          '</span> (' +
+          ex.example +
+          ').';
+        prepositionResult.className = 'result-box incorrect';
+        return;
+      }
+
+      // If subject+noun are found but the preposition isn't after them, it's a true order error.
+      if (!(prepFound && subjectFound && objectFound && order.pi > order.si && order.pi > order.oi)) {
         prepositionResult.textContent = 'Incorrect order. "' + ex.prep + '" must come after subject and noun.';
         prepositionResult.className = 'result-box incorrect';
         return;
