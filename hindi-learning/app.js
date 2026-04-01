@@ -380,6 +380,44 @@
     var LEAVES_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 50'%3E%3Cellipse cx='20' cy='28' rx='12' ry='18' fill='%232d5a27' transform='rotate(-20 20 28)'/%3E%3Cellipse cx='35' cy='25' rx='14' ry='20' fill='%23368a3e' transform='rotate(5 35 25)'/%3E%3Cellipse cx='50' cy='28' rx='11' ry='16' fill='%232d5a27' transform='rotate(25 50 28)'/%3E%3C/svg%3E";
     var SUN_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Ccircle cx='30' cy='30' r='16' fill='%23fbbf24'/%3E%3Cpath d='M30 8 L30 2 M30 52 L30 58 M8 30 L2 30 M52 30 L58 30 M16 16 L12 12 M44 44 L48 48 M16 44 L12 48 M44 16 L48 12' stroke='%23f59e0b' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E";
     var BOOK_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 55'%3E%3Crect x='10' y='8' width='50' height='40' rx='2' fill='%23dc2626'/%3E%3Crect x='12' y='10' width='46' height='36' rx='1' fill='%23ef4444'/%3E%3Crect x='35' y='8' width='3' height='40' fill='%23b91c1c'/%3E%3Crect x='16' y='14' width='16' height='2' fill='%23fef2f2'/%3E%3Crect x='16' y='19' width='14' height='1.5' fill='%23fecaca'/%3E%3Crect x='16' y='23' width='15' height='1.5' fill='%23fecaca'/%3E%3Crect x='16' y='27' width='12' height='1.5' fill='%23fecaca'/%3E%3Crect x='41' y='14' width='14' height='2' fill='%23fef2f2'/%3E%3Crect x='41' y='19' width='12' height='1.5' fill='%23fecaca'/%3E%3Crect x='41' y='23' width='13' height='1.5' fill='%23fecaca'/%3E%3Crect x='41' y='27' width='10' height='1.5' fill='%23fecaca'/%3E%3Cpath d='M10 12 L10 8 Q10 6 12 6 L33 6 Q35 6 35 8 L35 12' fill='none' stroke='%23b91c1c' stroke-width='1'/%3E%3Cpath d='M60 12 L60 8 Q60 6 58 6 L37 6 Q35 6 35 8 L35 12' fill='none' stroke='%23b91c1c' stroke-width='1'/%3E%3C/svg%3E";
+    var HOUSE_BG_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' fill='%23cfe8ff'/%3E%3Crect y='55' width='200' height='25' fill='%239ad68a'/%3E%3Crect x='120' y='30' width='60' height='35' rx='2' fill='%23f5d0a9' stroke='%23c98b5b' stroke-width='2'/%3E%3Cpath d='M115 32 L150 12 L185 32' fill='%23d97706' stroke='%23b45309' stroke-width='2'/%3E%3Crect x='145' y='45' width='14' height='20' fill='%239c5a2e'/%3E%3Crect x='128' y='40' width='14' height='12' fill='%23e0f2fe' stroke='%2390cdf4' stroke-width='1.5'/%3E%3Crect x='162' y='40' width='14' height='12' fill='%23e0f2fe' stroke='%2390cdf4' stroke-width='1.5'/%3E%3Ccircle cx='35' cy='18' r='10' fill='%23fbbf24'/%3E%3C/svg%3E";
+    var TREE_BG_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' fill='%23cfe8ff'/%3E%3Crect y='55' width='200' height='25' fill='%239ad68a'/%3E%3Crect x='95' y='32' width='12' height='32' rx='3' fill='%236b4423'/%3E%3Ccircle cx='101' cy='28' r='18' fill='%232d5a27'/%3E%3Ccircle cx='85' cy='35' r='14' fill='%23368a3e'/%3E%3Ccircle cx='118' cy='38' r='14' fill='%23368a3e'/%3E%3C/svg%3E";
+    var TREE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect x='36' y='38' width='10' height='30' rx='3' fill='%236b4423'/%3E%3Ccircle cx='41' cy='30' r='18' fill='%232d5a27'/%3E%3Ccircle cx='27' cy='38' r='14' fill='%23368a3e'/%3E%3Ccircle cx='55' cy='40' r='14' fill='%23368a3e'/%3E%3C/svg%3E";
+    var CAT_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 70'%3E%3Cellipse cx='45' cy='45' rx='22' ry='16' fill='%239ca3af'/%3E%3Ccircle cx='58' cy='28' r='12' fill='%239ca3af'/%3E%3Cpath d='M50 20 L52 10 L58 18 Z' fill='%239ca3af'/%3E%3Cpath d='M66 20 L64 10 L58 18 Z' fill='%239ca3af'/%3E%3Ccircle cx='55' cy='27' r='2' fill='%23000'/%3E%3Ccircle cx='62' cy='27' r='2' fill='%23000'/%3E%3Cpath d='M58 30 Q56 32 58 34 Q60 32 58 30' fill='%23000'/%3E%3Cpath d='M22 46 Q10 40 14 30' fill='none' stroke='%239ca3af' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E";
+    var DOG_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 70'%3E%3Cellipse cx='45' cy='45' rx='24' ry='16' fill='%23a16207'/%3E%3Ccircle cx='60' cy='30' r='12' fill='%23a16207'/%3E%3Cpath d='M52 30 Q46 26 46 18 Q52 20 56 24' fill='%23854d0e'/%3E%3Cpath d='M68 30 Q74 26 74 18 Q68 20 64 24' fill='%23854d0e'/%3E%3Ccircle cx='57' cy='28' r='2' fill='%23000'/%3E%3Ccircle cx='64' cy='28' r='2' fill='%23000'/%3E%3Ccircle cx='60' cy='33' r='3' fill='%23000'/%3E%3Cpath d='M22 52 Q14 56 18 62' fill='none' stroke='%23a16207' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E";
+    var TABLE_BG_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 80'%3E%3Crect width='200' height='80' fill='%23f8fafc'/%3E%3Crect y='55' width='200' height='25' fill='%23e2e8f0'/%3E%3Crect x='40' y='35' width='120' height='12' rx='3' fill='%23854d0e'/%3E%3Crect x='50' y='47' width='10' height='22' fill='%236b4423'/%3E%3Crect x='140' y='47' width='10' height='22' fill='%236b4423'/%3E%3C/svg%3E";
+
+    function prepDisplay(ex) {
+      if (ex && ex.prepDisplay) return ex.prepDisplay;
+      return (ex && ex.prep) || '';
+    }
+    function tokenMatches(token, word) {
+      var w = (word || '').toLowerCase();
+      if (!token) return false;
+      if (token === 'par') return w === 'par' || w.indexOf('पर') !== -1;
+      if (token === 'mein') return w === 'mein' || w.indexOf('में') !== -1;
+      if (token === 'neeche') return w === 'neeche' || w.indexOf('नीचे') !== -1;
+      if (token === 'upar') return w === 'upar' || w.indexOf('ऊपर') !== -1;
+      if (token === 'andar') return w === 'andar' || w.indexOf('अंदर') !== -1;
+      if (token === 'bahaar') return w === 'bahaar' || w.indexOf('बाहर') !== -1;
+      if (token === 'ke') return w === 'ke' || w.indexOf('के') !== -1;
+      return w === token;
+    }
+    function findPrepIndex(words, ex) {
+      var patterns = (ex && ex.prepPatterns) || [[ex.prep]];
+      for (var p = 0; p < patterns.length; p++) {
+        var pat = patterns[p];
+        if (!pat || !pat.length) continue;
+        for (var i = 0; i < words.length; i++) {
+          var ok = true;
+          for (var j = 0; j < pat.length; j++) {
+            if (!tokenMatches(pat[j], words[i + j])) { ok = false; break; }
+          }
+          if (ok) return i;
+        }
+      }
+      return -1;
+    }
     var exercises = [
       { title: 'Preposition: par (on)', hint: 'Drag the bird onto the branch.', prep: 'par', subjectRe: /\b(chiriya|chidiya)\b/, objectRe: /\b(perh|daal|dal)\b/, example: 'chiriya perh par hai', exampleDev: '\u091A\u093F\u0921\u093C\u093F\u092F\u093E \u092A\u0947\u0921\u093C \u092A\u0930 \u0939\u0948', bgImg: BRANCH_SVG, dragImg: BIRD_SVG, dropLabel: '↓ drop bird here' },
       { title: 'Preposition: mein (in)', hint: 'Drag the lion into the grass.', prep: 'mein', subjectRe: /\b(sher|lion)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'sher ghaas mein hai', exampleDev: '\u0936\u0947\u0930 \u0918\u093E\u0938 \u092E\u0947\u0928 \u0939\u0948', bgImg: GRASS_SVG, dragImg: LION_SVG, dropLabel: '↓ drop lion here' },
@@ -387,15 +425,22 @@
       { title: 'Preposition: par (on)', hint: 'Drag the snake onto the road.', prep: 'par', subjectRe: /\b(saanp|sarp|snake)\b/, objectRe: /\b(sadak|road)\b/, example: 'saanp sadak par hai', exampleDev: '\u0938\u093E\u0902\u092A \u0938\u0921\u093C\u0915 \u092A\u0930 \u0939\u0948', bgImg: ROAD_SVG, dragImg: SNAKE_SVG, dropLabel: '↓ drop snake here' },
       { title: 'Preposition: par (on)', hint: 'Drag the leaves onto the grass.', prep: 'par', subjectRe: /\b(patte|leaves|patta)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'patte ghaas par hain', exampleDev: '\u092A\u0924\u094D\u0924\u0947 \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948\u0902', bgImg: GRASS_SVG, dragImg: LEAVES_SVG, dropLabel: '↓ drop leaves here' },
       { title: 'Preposition: mein (in)', hint: 'Drag the sun into the sky.', prep: 'mein', subjectRe: /\b(suraj|sun)\b/, objectRe: /\b(aasman|akash|sky)\b/, example: 'suraj aasman mein hai', exampleDev: '\u0938\u0942\u0930\u091C \u0906\u0938\u092E\u093E\u0928 \u092E\u0947\u0928 \u0939\u0948', bgImg: SKY_PLAIN_SVG, dragImg: SUN_SVG, dropLabel: '↓ drop sun here' },
-      { title: 'Preposition: par (on)', hint: 'Drag the book onto the grass.', prep: 'par', subjectRe: /\b(kitaab|kitab|book|pustak)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'kitaab ghaas par hai', exampleDev: '\u0915\u093F\u0924\u093E\u092C \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948', bgImg: GRASS_SVG, dragImg: BOOK_SVG, dropLabel: '↓ drop book here' }
+      { title: 'Preposition: par (on)', hint: 'Drag the book onto the grass.', prep: 'par', subjectRe: /\b(kitaab|kitab|book|pustak)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'kitaab ghaas par hai', exampleDev: '\u0915\u093F\u0924\u093E\u092C \u0918\u093E\u0938 \u092A\u0930 \u0939\u0948', bgImg: GRASS_SVG, dragImg: BOOK_SVG, dropLabel: '↓ drop book here' },
+      { title: 'Preposition: ke bahaar (outside)', hint: 'Drag the tree outside the house.', prep: 'bahaar', prepDisplay: 'ke bahaar', prepPatterns: [['ke','bahaar'],['bahaar']], subjectRe: /\b(ped|perh|tree)\b/, objectRe: /\b(ghar|ghaar|house)\b/, example: 'ped ghar ke bahaar hai', exampleDev: '\u092A\u0947\u0921\u093C \u0918\u0930 \u0915\u0947 \u092C\u093E\u0939\u0930 \u0939\u0948', bgImg: HOUSE_BG_SVG, dragImg: TREE_SVG, dropLabel: '↓ drop tree outside' },
+      { title: 'Preposition: ke bahaar (outside)', hint: 'Drag the cat outside the house.', prep: 'bahaar', prepDisplay: 'ke bahaar', prepPatterns: [['ke','bahaar'],['bahaar']], subjectRe: /\b(billi|cat)\b/, objectRe: /\b(ghar|ghaar|house)\b/, example: 'billi ghar ke bahaar hai', exampleDev: '\u092C\u093F\u0932\u094D\u0932\u0940 \u0918\u0930 \u0915\u0947 \u092C\u093E\u0939\u0930 \u0939\u0948', bgImg: HOUSE_BG_SVG, dragImg: CAT_SVG, dropLabel: '↓ drop cat outside' },
+      { title: 'Preposition: neeche (below)', hint: 'Drag the lion below the tree.', prep: 'neeche', prepPatterns: [['neeche']], subjectRe: /\b(sher|lion)\b/, objectRe: /\b(ped|perh|tree)\b/, example: 'sher ped ke neeche hai', exampleDev: '\u0936\u0947\u0930 \u092A\u0947\u0921\u093C \u0915\u0947 \u0928\u0940\u091A\u0947 \u0939\u0948', bgImg: TREE_BG_SVG, dragImg: LION_SVG, dropLabel: '↓ drop lion below' },
+      { title: 'Preposition: mein (in)', hint: 'Drag the dog into the grass.', prep: 'mein', subjectRe: /\b(kutta|dog)\b/, objectRe: /\b(ghaas|ghas|gaas|grass)\b/, example: 'kutta ghaas mein hai', exampleDev: '\u0915\u0941\u0924\u094D\u0924\u093E \u0918\u093E\u0938 \u092E\u0947\u0902 \u0939\u0948', bgImg: GRASS_SVG, dragImg: DOG_SVG, dropLabel: '↓ drop dog here' },
+      { title: 'Preposition: par (on)', hint: 'Drag the book onto the table.', prep: 'par', subjectRe: /\b(kitaab|kitab|book|pustak)\b/, objectRe: /\b(mez|maiz|table)\b/, example: 'kitaab mez par hai', exampleDev: '\u0915\u093F\u0924\u093E\u092C \u092E\u0947\u091C \u092A\u0930 \u0939\u0948', bgImg: TABLE_BG_SVG, dragImg: BOOK_SVG, dropLabel: '↓ drop book on table' },
+      { title: 'Preposition: andar (inside)', hint: 'Type a sentence using andar (inside).', prep: 'andar', prepPatterns: [['ke','andar'],['andar']], subjectRe: /\b(billi|cat|kutta|dog|sher|lion)\b/, objectRe: /\b(ghar|ghaar|house)\b/, example: 'billi ghar ke andar hai', exampleDev: '\u092C\u093F\u0932\u094D\u0932\u0940 \u0918\u0930 \u0915\u0947 \u0905\u0902\u0926\u0930 \u0939\u0948', bgImg: HOUSE_BG_SVG, dragImg: CAT_SVG, dropLabel: '↓ drop inside' },
+      { title: 'Preposition: upar (above)', hint: 'Type a sentence using upar (above).', prep: 'upar', prepPatterns: [['upar']], subjectRe: /\b(badal|cloud|suraj|sun)\b/, objectRe: /\b(ghar|ghaar|house|ped|perh|tree|aasman|sky)\b/, example: 'badal ghar ke upar hai', exampleDev: '\u092C\u093E\u0926\u0932 \u0918\u0930 \u0915\u0947 \u090A\u092A\u0930 \u0939\u0948', bgImg: HOUSE_BG_SVG, dragImg: CLOUD_SVG, dropLabel: '↓ drop above' }
     ];
     var currentPrepositionIndex = 0;
     function renderPrepositionExercise() {
       var ex = exercises[currentPrepositionIndex];
       if (titleEl) titleEl.textContent = ex.title;
       if (hintEl) hintEl.textContent = ex.hint;
-      if (instructionEl) instructionEl.textContent = 'Order: subject + noun + preposition. ' + (ex.prep === 'mein' ? "Use 'mein' for 'in'." : "Use 'par' for 'on'.");
-      if (sentenceLabel) sentenceLabel.textContent = 'Sentence (use \'' + ex.prep + '\' for ' + (ex.prep === 'mein' ? "'in'):" : "'on'):");
+      if (instructionEl) instructionEl.textContent = 'Order: subject + noun + preposition. Use "' + prepDisplay(ex) + '".';
+      if (sentenceLabel) sentenceLabel.textContent = 'Sentence (use "' + prepDisplay(ex) + '"):';
       if (bgImg) bgImg.src = ex.bgImg;
       if (dragImg) dragImg.src = ex.dragImg;
       if (dropLabel) dropLabel.textContent = ex.dropLabel;
@@ -472,25 +517,24 @@
       var hasPar = /par/.test(norm) || /\u092A\u0930/.test(raw);
       var parSubjectRe = /\b(chiriya|chidiya)\b/;
       var parObjectRe = /\b(perh|daal|dal)\b/;
-      function parseWordOrder(n, subR, objR, prep) {
+      function parseWordOrder(n, subR, objR, ex) {
         var words = n.split(/\s+/);
         var si = -1, oi = -1, pi = -1;
         for (var w = 0; w < words.length; w++) {
           if (subR.test(words[w])) si = si < 0 ? w : si;
           if (objR.test(words[w])) oi = oi < 0 ? w : oi;
-          if (prep === 'par' && (words[w] === 'par' || /\u092A\u0930/.test(words[w]))) pi = w;
-          if (prep === 'mein' && (words[w] === 'mein' || /\u092E\u0947\u0928/.test(words[w]))) pi = w;
         }
+        pi = findPrepIndex(words, ex);
         return { words: words, si: si, oi: oi, pi: pi };
       }
       var ex = exercises[currentPrepositionIndex];
-      var hasPrep = (ex.prep === 'par' && (/par/.test(norm) || /\u092A\u0930/.test(raw))) || (ex.prep === 'mein' && (/mein/.test(norm) || /\u092E\u0947\u0928/.test(raw)));
+      var hasPrep = findPrepIndex(norm.split(/\s+/), ex) >= 0;
       if (!hasPrep) {
-        prepositionResult.innerHTML = 'Use "' + ex.prep + '". Correct order: subject + noun + ' + ex.prep + '. Example: <span class="devanagari-part">' + ex.exampleDev + '</span> (' + ex.example + ').';
+        prepositionResult.innerHTML = 'Use "' + prepDisplay(ex) + '". Correct order: subject + noun + ' + prepDisplay(ex) + '. Example: <span class="devanagari-part">' + ex.exampleDev + '</span> (' + ex.example + ').';
         prepositionResult.className = 'result-box incorrect';
         return;
       }
-      var order = parseWordOrder(norm, ex.subjectRe, ex.objectRe, ex.prep);
+      var order = parseWordOrder(norm, ex.subjectRe, ex.objectRe, ex);
       var subjectFound = order.si >= 0;
       var objectFound = order.oi >= 0;
       var prepFound = order.pi >= 0;
@@ -509,7 +553,8 @@
           var best = { w: '', d: 999 };
           for (var i = 0; i < order.words.length; i++) {
             var w = order.words[i];
-            if (w === ex.prep) continue;
+            // skip any preposition tokens
+            if (findPrepIndex([w], ex) === 0) continue;
             var d = levenshtein(w, target);
             if (d < best.d) best = { w: w, d: d };
           }
@@ -541,7 +586,7 @@
 
       // If subject+noun are found but the preposition isn't after them, it's a true order error.
       if (!(prepFound && subjectFound && objectFound && order.pi > order.si && order.pi > order.oi)) {
-        prepositionResult.textContent = 'Incorrect order. "' + ex.prep + '" must come after subject and noun.';
+        prepositionResult.textContent = 'Incorrect order. "' + prepDisplay(ex) + '" must come after subject and noun.';
         prepositionResult.className = 'result-box incorrect';
         return;
       }
@@ -1305,7 +1350,17 @@
       { roman: 'haar', devanagari: 'हार', meaning: 'necklace' },
       { roman: 'tala', devanagari: 'ताला', meaning: 'lock' },
       { roman: 'khana', devanagari: 'खाना', meaning: 'food' },
-      { roman: 'kal', devanagari: 'कल', meaning: 'yesterday/tomorrow' }
+      { roman: 'kal', devanagari: 'कल', meaning: 'yesterday/tomorrow' },
+      { roman: 'kela', devanagari: 'केला', meaning: 'banana' },
+      { roman: 'aat', devanagari: 'आठ', meaning: 'eight' },
+      { roman: 'kaala', devanagari: 'काला', meaning: 'black' },
+      { roman: 'pila', devanagari: 'पीला', meaning: 'yellow' },
+      { roman: 'laal', devanagari: 'लाल', meaning: 'red' },
+      { roman: 'patte', devanagari: 'पत्ते', meaning: 'leaves' },
+      { roman: 'par', devanagari: 'पर', meaning: 'on' },
+      { roman: 'kaam', devanagari: 'काम', meaning: 'work' },
+      { roman: 'aajka', devanagari: 'आज का', meaning: "today's" },
+      { roman: 'kheera', devanagari: 'खीरा', meaning: 'cucumber' }
     ];
 
     var currentIndex = 0;
